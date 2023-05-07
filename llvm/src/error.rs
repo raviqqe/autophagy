@@ -5,11 +5,11 @@ use std::{
 };
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum MlirError {
+pub enum LlvmError {
     AddInstruction(String),
 }
 
-impl Display for MlirError {
+impl Display for LlvmError {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match self {
             Self::AddInstruction(name) => {
@@ -19,4 +19,4 @@ impl Display for MlirError {
     }
 }
 
-impl Error for MlirError {}
+impl Error for LlvmError {}
