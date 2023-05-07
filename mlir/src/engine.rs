@@ -15,7 +15,7 @@ impl Engine {
         &self.engine
     }
 
-    pub fn add_instruction(&self, instruction: &Instruction) -> Result<(), MlirError> {
+    pub fn add_instruction(&self, _instruction: &Instruction) -> Result<(), MlirError> {
         todo!()
     }
 
