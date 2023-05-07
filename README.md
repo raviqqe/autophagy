@@ -1,1 +1,5 @@
-# autophagy
+# Autophagy
+
+## License
+
+[The Unlicense](UNLICENSE)
