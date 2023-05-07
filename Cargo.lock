@@ -13,6 +13,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "autophagy-llvm"
+version = "0.1.0"
+dependencies = [
+ "autophagy",
+]
+
+[[package]]
 name = "autophagy-macro"
 version = "0.1.0"
 dependencies = [
