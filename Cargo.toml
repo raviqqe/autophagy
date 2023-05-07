@@ -1,5 +1,5 @@
 [workspace]
-members = ["autophagy", "macro", "mlir"]
+members = ["autophagy", "llvm", "macro", "mlir"]
 
 [profile.release]
 lto = true
