@@ -1,4 +1,4 @@
-use crate::MlirError;
+use crate::{compile::compile, MlirError};
 use autophagy::Instruction;
 use melior::ExecutionEngine;
 
@@ -7,8 +7,8 @@ pub trait Engine {
 }
 
 impl Engine for ExecutionEngine {
-    fn add_instruction(&self, _instruction: &Instruction) -> Result<(), MlirError> {
-        todo!()
+    fn add_instruction(&self, instruction: &Instruction) -> Result<(), MlirError> {
+        compile(self, instruction)
     }
 }
 
