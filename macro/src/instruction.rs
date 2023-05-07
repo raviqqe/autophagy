@@ -30,6 +30,7 @@ pub fn generate(
         &(ident.to_string() + "_instruction"),
         function.sig.ident.span(),
     );
+    let test_module_name = Ident::new(&(ident.to_string() + "_tests"), function.sig.ident.span());
     let name_string = Expr::Lit(ExprLit {
         attrs: Vec::new(),
         lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
@@ -44,7 +45,7 @@ pub fn generate(
         }
 
         #[cfg(test)]
-        mod tests {
+        mod #test_module_name {
             use super::*;
 
             #[test]

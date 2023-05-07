@@ -1,8 +1,11 @@
 use autophagy_macro::instruction;
 
 #[instruction]
-pub fn foo(mut x: f64) {
-    x += 42.0;
+pub fn foo(x: usize) -> usize {
+    x
+}
 
-    println!("{x}");
+#[instruction]
+pub fn bar(x: usize) -> usize {
+    x
 }
