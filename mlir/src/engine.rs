@@ -32,6 +32,7 @@ mod tests {
         context.append_dialect_registry(&registry);
         register_all_llvm_translations(&context);
 
+        // TODO Add an instruction function by `add_instruction`.
         let mut module = Module::parse(
             &context,
             r#"
