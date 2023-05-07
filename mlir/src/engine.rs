@@ -1,4 +1,5 @@
-use crate::Error;
+use crate::MlirError;
+use autophagy::Instruction;
 use melior::ExecutionEngine;
 
 pub struct Engine {
@@ -14,8 +15,8 @@ impl Engine {
         &self.engine
     }
 
-    pub fn add_instruction(&self) -> Result<(), Error> {
-        &self.engine
+    pub fn add_instruction(&self, instruction: &Instruction) -> Result<(), MlirError> {
+        todo!()
     }
 
     pub unsafe fn run_instruction(
