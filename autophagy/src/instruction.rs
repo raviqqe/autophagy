@@ -11,7 +11,7 @@ impl Instruction {
     }
 
     pub fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 
     pub fn r#fn(&self) -> &ItemFn {
