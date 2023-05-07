@@ -1,5 +1,6 @@
 use crate::Instruction;
 
+#[derive(Debug, Default)]
 pub struct Engine {
     instructions: Vec<Instruction>,
 }

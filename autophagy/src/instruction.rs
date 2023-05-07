@@ -1,7 +1,11 @@
+use derivative::Derivative;
 use syn::ItemFn;
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Instruction {
     name: &'static str,
+    #[derivative(Debug = "ignore")]
     r#fn: ItemFn,
 }
 
