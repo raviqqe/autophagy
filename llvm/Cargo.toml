@@ -1,0 +1,8 @@
+[package]
+name = "autophagy-llvm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+autophagy = { version = "0.1", path = "../autophagy" }
+inkwell = { version = "0.2.0", features = ["llvm16-0"] }
