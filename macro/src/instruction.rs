@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
 use std::error::Error;
-use syn::{FnArg, ItemFn};
+use syn::{Expr, ExprLit, FnArg, ItemFn, Lit, LitStr};
 
 pub fn generate(
     attributes: &AttributeList,
@@ -30,13 +30,17 @@ pub fn generate(
         &(ident.to_string() + "_instruction"),
         function.sig.ident.span(),
     );
+    let name_string = Expr::Lit(ExprLit {
+        attrs: Vec::new(),
+        lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
+    });
 
     Ok(quote! {
         pub fn #variable_name() -> #crate_path::Instruction {
             let stream = quote::quote!(#function);
             let function = syn::parse2::<syn::ItemFn>(stream).unwrap();
 
-            #crate_path::Instruction::new("#ident", function)
+            #crate_path::Instruction::new(#name_string, function)
         }
 
         #function
