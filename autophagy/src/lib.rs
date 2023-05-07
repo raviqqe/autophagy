@@ -1,6 +1,6 @@
 mod engine;
 mod instruction;
-mod instructions;
+pub mod instructions;
 
 pub use autophagy_macro::*;
 pub use engine::Engine;
