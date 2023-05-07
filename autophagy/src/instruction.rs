@@ -18,6 +18,3 @@ impl Instruction {
         &self.r#fn
     }
 }
-
-#[autophagy_macro::instruction(crate = "crate")]
-fn foo() {}
