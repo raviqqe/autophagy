@@ -3,4 +3,11 @@ name = "autophagy-macro"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+proc-macro = true
+
 [dependencies]
+convert_case = "0.6"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
