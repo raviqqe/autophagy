@@ -3,7 +3,7 @@ use autophagy::Instruction;
 use melior::ExecutionEngine;
 
 pub trait Engine {
-    fn add_instruction(&self, _instruction: &Instruction) -> Result<(), MlirError>;
+    fn add_instruction(&self, instruction: &Instruction) -> Result<(), MlirError>;
 }
 
 impl Engine for ExecutionEngine {
