@@ -36,11 +36,7 @@ pub fn generate(
             let stream = quote::quote!(#function);
             let function = syn::parse2::<syn::ItemFn>(stream).unwrap();
 
-            todo!()
-            // #crate_path::Instruction::new(
-            //     "#ident",
-            //     function,
-            // )
+            #crate_path::Instruction::new("#ident", function)
         }
 
         #function
