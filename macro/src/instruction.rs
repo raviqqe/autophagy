@@ -34,12 +34,13 @@ pub fn generate(
     Ok(quote! {
         pub fn #variable_name() -> #crate_path::Instruction {
             let stream = quote::quote!(#function);
-            let function = syn::parse_macro_input!(stream as ItemFn);
+            let function = syn::parse2::<syn::ItemFn>(stream).unwrap();
 
-            #crate_path::Instruction::new(
-                "#ident",
-                function,
-            )
+            todo!()
+            // #crate_path::Instruction::new(
+            //     "#ident",
+            //     function,
+            // )
         }
 
         #function
