@@ -26,6 +26,7 @@ pub fn generate(
 
     let crate_path = parse_crate_path(attributes)?;
     let ident = &function.sig.ident;
+    let visibility = &function.vis;
     let variable_name = Ident::new(
         &(ident.to_string() + "_instruction"),
         function.sig.ident.span(),
@@ -37,7 +38,7 @@ pub fn generate(
     });
 
     Ok(quote! {
-        pub fn #variable_name() -> #crate_path::Instruction {
+        #visibility fn #variable_name() -> #crate_path::Instruction {
             let stream = quote::quote!(#function);
             let function = syn::parse2::<syn::ItemFn>(stream).unwrap();
 
