@@ -1,0 +1,5 @@
+[workspace]
+members = ["autophagy"]
+
+[profile.release]
+lto = true
