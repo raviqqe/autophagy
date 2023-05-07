@@ -1,5 +1,6 @@
 mod attribute_list;
 mod instruction;
+mod utility;
 
 use self::attribute_list::AttributeList;
 use proc_macro::TokenStream;
