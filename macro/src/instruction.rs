@@ -43,6 +43,16 @@ pub fn generate(
             #crate_path::Instruction::new(#name_string, function)
         }
 
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn no_panic() {
+                #variable_name();
+            }
+        }
+
         #function
     }
     .into())
