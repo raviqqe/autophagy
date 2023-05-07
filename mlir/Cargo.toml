@@ -1,0 +1,8 @@
+[package]
+name = "autophagy-mlir"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+autophagy = { version = "0.1", path = "../autophagy" }
+melior = "0.4.0"
