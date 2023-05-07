@@ -64,8 +64,8 @@ mod tests {
                 engine.invoke_packed(
                     "add",
                     &mut [
-                        &mut argument as *mut i32 as *mut (),
-                        &mut result as *mut i32 as *mut (),
+                        &mut argument as *mut _ as *mut _,
+                        &mut result as *mut _ as *mut _,
                     ],
                 )
             },
