@@ -1,7 +1,7 @@
-use pen_ffi_macro::bindgen;
+use autophagy_macro::instruction;
 
-#[instruction(foo)]
-fn foo(mut x: f64) {
+#[instruction]
+pub fn foo(mut x: f64) {
     x += 42.0;
 
     println!("{x}");
