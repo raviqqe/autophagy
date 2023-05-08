@@ -2,10 +2,8 @@ use crate::Error;
 use autophagy::Instruction;
 use melior::ir::Module;
 
-pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> {
-    let function = instruction.r#fn();
+pub fn compile(_module: &Module, instruction: &Instruction) -> Result<(), Error> {
+    let _function = instruction.r#fn();
 
-    function.sig.foo;
-
-    Ok(())
+    todo!()
 }
