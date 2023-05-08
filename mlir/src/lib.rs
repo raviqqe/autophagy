@@ -1,6 +1,7 @@
 mod compile;
 mod error;
 
+pub use compile::compile;
 pub use error::Error;
 
 #[cfg(test)]
