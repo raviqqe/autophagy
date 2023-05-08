@@ -1,7 +1,9 @@
-use crate::MlirError;
+use crate::Error;
 use autophagy::Instruction;
-use melior::ExecutionEngine;
+use melior::ir::Module;
 
-pub fn compile(_engine: &ExecutionEngine, _instruction: &Instruction) -> Result<(), MlirError> {
-    todo!();
+pub fn compile(_module: &Module, instruction: &Instruction) -> Result<(), Error> {
+    let _function = instruction.r#fn();
+
+    todo!()
 }
