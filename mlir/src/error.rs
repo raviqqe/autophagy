@@ -1,15 +1,15 @@
 use core::fmt;
 use std::{
-    error::Error,
+    error,
     fmt::{Display, Formatter},
 };
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum MlirError {
+pub enum Error {
     AddInstruction(String),
 }
 
-impl Display for MlirError {
+impl Display for Error {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match self {
             Self::AddInstruction(name) => {
@@ -19,4 +19,4 @@ impl Display for MlirError {
     }
 }
 
-impl Error for MlirError {}
+impl error::Error for Error {}
