@@ -233,9 +233,9 @@ dependencies = [
 
 [[package]]
 name = "melior"
-version = "0.4.5"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1236330ac6fa85e831b379a70df9f054d627c8e2cab56363fcd99a2590b3300d"
+checksum = "3c9f7bf3d9d18cbd3851ff218c32bbdc53628463009b89396d69e50fd374a6f3"
 dependencies = [
  "melior-macro",
  "mlir-sys",
@@ -244,13 +244,15 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.1.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "763b6e28ef32f32094a16901ff1f09ae0865664f73f01fbe88151af1d6fd630d"
+checksum = "a1b98c1385a168cce1df9f81e02bec3e3f192e4f2f509414b15e8fc6cc3bb7dc"
 dependencies = [
  "convert_case",
+ "once_cell",
  "proc-macro2",
  "quote",
+ "regex",
  "syn 2.0.15",
 ]
 

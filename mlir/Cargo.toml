@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 autophagy = { version = "0.1", path = "../autophagy" }
-melior = "0.4.5"
+melior = "0.6.0"
