@@ -400,4 +400,52 @@ mod tests {
 
         assert!(module.as_operation().verify());
     }
+
+    #[test]
+    fn neg() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::neg_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn not() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::not_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn and() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::and_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn or() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::or_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
 }
