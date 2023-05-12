@@ -148,7 +148,7 @@ fn compile_statement<'a>(
                 });
             }
         }
-        syn::Stmt::Macro(_) => todo!(),
+        syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
     }
 
     Ok(())
@@ -164,7 +164,7 @@ fn compile_local_binding<'a>(
     let location = Location::unknown(context);
     let identifier = match &local.pat {
         syn::Pat::Ident(identifier) => identifier.ident.to_string(),
-        _ => todo!(),
+        _ => return Err(Error::NotSupported("non-identifier pattern")),
     };
     let value = compile_expression(context, builder, variables)?;
 
