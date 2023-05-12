@@ -38,6 +38,6 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(math::add_instruction()).unwrap();
+        compile(&module, &math::add_instruction()).unwrap();
     }
 }
