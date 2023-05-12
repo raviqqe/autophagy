@@ -279,4 +279,16 @@ mod tests {
 
         assert!(module.as_operation().verify());
     }
+
+    #[test]
+    fn sub() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::sub_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
 }
