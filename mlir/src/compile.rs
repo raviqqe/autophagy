@@ -55,7 +55,7 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
                 })
                 .enumerate()
             {
-                variables.insert(name?, block.argument(index).unwrap().into());
+                variables.insert(name?, block.argument(index)?.into());
             }
 
             compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
@@ -168,8 +168,56 @@ fn compile_expression<'a>(
             .result(0)?
             .into(),
         syn::Expr::Path(path) => compile_path(path, variables)?,
+        syn::Expr::Unary(operation) => {
+            compile_unary_operation(context, builder, operation, variables)?
+                .result(0)?
+                .into()
+        }
         _ => todo!(),
     })
+}
+
+fn compile_unary_operation<'a>(
+    context: &Context,
+    builder: &'a Block,
+    operation: &syn::ExprUnary,
+    variables: &mut TrainMap<String, Value<'a>>,
+) -> Result<OperationRef<'a>, Error> {
+    let location = Location::unknown(context);
+    let value = compile_expression(context, builder, &operation.expr, variables)?;
+
+    // spell-checker: disable
+    Ok(builder.append_operation(match &operation.op {
+        syn::UnOp::Deref(_) => todo!(),
+        syn::UnOp::Neg(_) => arith::subi(
+            builder
+                .append_operation(arith::constant(
+                    context,
+                    IntegerAttribute::new(0, Type::index(context)).into(),
+                    location,
+                ))
+                .result(0)
+                .unwrap()
+                .into(),
+            value,
+            location,
+        ),
+        syn::UnOp::Not(_) => arith::xori(
+            builder
+                .append_operation(arith::constant(
+                    context,
+                    IntegerAttribute::new(0, Type::index(context)).into(),
+                    location,
+                ))
+                .result(0)
+                .unwrap()
+                .into(),
+            value,
+            location,
+        ),
+        _ => return Err(Error::NotSupported("unknown unary operator")),
+    }))
+    // spell-checker: enable
 }
 
 fn compile_binary_operation<'a>(
@@ -182,10 +230,39 @@ fn compile_binary_operation<'a>(
     let left = compile_expression(context, builder, &operation.left, variables)?;
     let right = compile_expression(context, builder, &operation.right, variables)?;
 
+    // spell-checker: disable
     Ok(builder.append_operation(match &operation.op {
         syn::BinOp::Add(_) => arith::addi(left, right, location),
-        _ => todo!(),
+        syn::BinOp::Sub(_) => arith::subi(left, right, location),
+        syn::BinOp::Mul(_) => arith::muli(left, right, location),
+        syn::BinOp::Div(_) => arith::divsi(left, right, location),
+        syn::BinOp::Rem(_) => arith::remsi(left, right, location),
+        syn::BinOp::And(_) => arith::andi(left, right, location),
+        syn::BinOp::Or(_) => arith::ori(left, right, location),
+        syn::BinOp::BitXor(_) => arith::xori(left, right, location),
+        syn::BinOp::BitAnd(_) => arith::andi(left, right, location),
+        syn::BinOp::BitOr(_) => arith::ori(left, right, location),
+        syn::BinOp::Shl(_) => arith::shli(left, right, location),
+        syn::BinOp::Shr(_) => arith::shrsi(left, right, location),
+        syn::BinOp::Eq(_) => arith::cmpi(context, arith::CmpiPredicate::Eq, left, right, location),
+        syn::BinOp::Lt(_) => arith::cmpi(context, arith::CmpiPredicate::Slt, left, right, location),
+        syn::BinOp::Le(_) => arith::cmpi(context, arith::CmpiPredicate::Sle, left, right, location),
+        syn::BinOp::Ne(_) => arith::cmpi(context, arith::CmpiPredicate::Ne, left, right, location),
+        syn::BinOp::Ge(_) => arith::cmpi(context, arith::CmpiPredicate::Sge, left, right, location),
+        syn::BinOp::Gt(_) => arith::cmpi(context, arith::CmpiPredicate::Sgt, left, right, location),
+        syn::BinOp::AddAssign(_) => todo!(),
+        syn::BinOp::SubAssign(_) => todo!(),
+        syn::BinOp::MulAssign(_) => todo!(),
+        syn::BinOp::DivAssign(_) => todo!(),
+        syn::BinOp::RemAssign(_) => todo!(),
+        syn::BinOp::BitXorAssign(_) => todo!(),
+        syn::BinOp::BitAndAssign(_) => todo!(),
+        syn::BinOp::BitOrAssign(_) => todo!(),
+        syn::BinOp::ShlAssign(_) => todo!(),
+        syn::BinOp::ShrAssign(_) => todo!(),
+        _ => return Err(Error::NotSupported("unknown binary operator")),
     }))
+    // spell-checker: enable
 }
 
 fn compile_expression_literal<'a>(
@@ -272,6 +349,102 @@ mod tests {
         let module = Module::new(location);
 
         compile(&module, &math::add_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn sub() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::sub_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn mul() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::mul_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn div() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::div_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn rem() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::rem_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn neg() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::neg_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn not() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::not_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn and() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::and_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn or() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::or_instruction()).unwrap();
 
         assert!(module.as_operation().verify());
     }
