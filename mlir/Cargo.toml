@@ -6,5 +6,6 @@ edition = "2021"
 [dependencies]
 autophagy = { version = "0.1", path = "../autophagy" }
 melior = "0.7"
+quote = "1.0.27"
 syn = "2.0.15"
 train-map = "0.1.0"

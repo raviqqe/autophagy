@@ -68,6 +68,7 @@ version = "0.1.0"
 dependencies = [
  "autophagy",
  "melior",
+ "quote",
  "syn 2.0.15",
  "train-map",
 ]

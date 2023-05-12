@@ -3,7 +3,7 @@ use autophagy::Instruction;
 use melior::{
     dialect::{arith, func, scf},
     ir::{
-        attribute::{IntegerAttribute, StringAttribute, TypeAttribute},
+        attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
         r#type::{FunctionType, IntegerType},
         Block, Location, Module, OperationRef, Region, Type, Value,
     },
@@ -47,10 +47,10 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
                 .inputs
                 .iter()
                 .map(|argument| match argument {
-                    syn::FnArg::Typed(typed) => Ok(match typed.pat.as_ref() {
-                        syn::Pat::Ident(identifier) => identifier.ident.to_string(),
-                        _ => todo!(),
-                    }),
+                    syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
+                        syn::Pat::Ident(identifier) => Ok(identifier.ident.to_string()),
+                        _ => Err(Error::NotSupported("non-identifier pattern")),
+                    },
                     syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
                 })
                 .enumerate()
@@ -74,17 +74,27 @@ fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>
     Ok(match r#type {
         syn::Type::Path(path) => {
             if let Some(identifier) = path.path.get_ident() {
-                match identifier.to_string().as_str() {
-                    "i64" | "u64" => IntegerType::new(context, 64).into(),
-                    "isize" | "usize" => Type::index(context),
-                    _ => todo!(),
-                }
+                compile_primitive_type(context, &identifier.to_string())
             } else {
                 return Err(Error::NotSupported("custom type"));
             }
         }
         _ => todo!(),
     })
+}
+
+fn compile_primitive_type<'c>(context: &'c Context, name: &str) -> Type<'c> {
+    match name {
+        "bool" => IntegerType::new(context, 1).into(),
+        "f32" => Type::float32(context),
+        "f64" => Type::float64(context),
+        "isize" | "usize" => Type::index(context),
+        "i8" | "u8" => IntegerType::new(context, 8).into(),
+        "i16" | "u16" => IntegerType::new(context, 16).into(),
+        "i32" | "u32" => IntegerType::new(context, 32).into(),
+        "i64" | "u64" => IntegerType::new(context, 64).into(),
+        _ => todo!(),
+    }
 }
 
 // TODO Use this.
@@ -133,7 +143,7 @@ fn compile_statement<'a>(
     let location = Location::unknown(context);
 
     match statement {
-        syn::Stmt::Local(_) => todo!(),
+        syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
         syn::Stmt::Item(_) => todo!(),
         syn::Stmt::Expr(expression, semicolon) => {
             let value = compile_expression(context, builder, expression, variables)?;
@@ -146,8 +156,36 @@ fn compile_statement<'a>(
                 });
             }
         }
-        syn::Stmt::Macro(_) => todo!(),
+        syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
     }
+
+    Ok(())
+}
+
+fn compile_local_binding<'a>(
+    context: &Context,
+    builder: &'a Block,
+    local: &syn::Local,
+    variables: &mut TrainMap<String, Value<'a>>,
+) -> Result<(), Error> {
+    let value = compile_expression(
+        context,
+        builder,
+        if let Some(initial) = &local.init {
+            &initial.expr
+        } else {
+            return Err(Error::NotSupported("uninitialized let binding"));
+        },
+        variables,
+    )?;
+
+    variables.insert(
+        match &local.pat {
+            syn::Pat::Ident(identifier) => identifier.ident.to_string(),
+            _ => return Err(Error::NotSupported("non-identifier pattern")),
+        },
+        value,
+    );
 
     Ok(())
 }
@@ -285,17 +323,25 @@ fn compile_expression_literal<'a>(
                 integer.base10_parse::<i64>()?,
                 match integer.suffix() {
                     "" => Type::index(context),
-                    "i8" | "u8" => IntegerType::new(context, 8).into(),
-                    "i16" | "u16" => IntegerType::new(context, 16).into(),
-                    "i32" | "u32" => IntegerType::new(context, 32).into(),
-                    "i64" | "u64" => IntegerType::new(context, 64).into(),
-                    _ => todo!(),
+                    name => compile_primitive_type(context, name),
                 },
             )
             .into(),
             location,
         ),
-        syn::Lit::Float(_) => todo!(),
+        syn::Lit::Float(float) => arith::constant(
+            context,
+            FloatAttribute::new(
+                context,
+                float.base10_parse::<f64>()?,
+                match float.suffix() {
+                    "" => Type::index(context),
+                    name => compile_primitive_type(context, name),
+                },
+            )
+            .into(),
+            location,
+        ),
         syn::Lit::Str(_) => todo!(),
         syn::Lit::ByteStr(_) => todo!(),
         syn::Lit::Byte(_) => todo!(),
@@ -314,7 +360,7 @@ fn compile_path<'a>(
             .get(&name)
             .ok_or(Error::VariableNotDefined(name))?
     } else {
-        todo!()
+        return Err(Error::NotSupported("non-identifier path"));
     })
 }
 
@@ -445,6 +491,78 @@ mod tests {
         let module = Module::new(location);
 
         compile(&module, &math::or_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn bool() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> bool {
+            true
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn float32() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> f32 {
+            42f32
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn float64() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> f64 {
+            42f64
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn r#let() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> usize {
+            42usize
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
 
         assert!(module.as_operation().verify());
     }
