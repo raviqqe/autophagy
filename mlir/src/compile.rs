@@ -312,7 +312,7 @@ fn compile_expression_literal<'a>(
             IntegerAttribute::new(
                 integer.base10_parse::<i64>()?,
                 match integer.suffix() {
-                    "" => Type::index(context),
+                    "" | "isize" | "usize" => Type::index(context),
                     "i8" | "u8" => IntegerType::new(context, 8).into(),
                     "i16" | "u16" => IntegerType::new(context, 16).into(),
                     "i32" | "u32" => IntegerType::new(context, 32).into(),
