@@ -19,6 +19,6 @@ pub fn div(x: usize, y: usize) -> usize {
 }
 
 #[autophagy_macro::instruction(crate = "crate")]
-pub fn r#mod(x: usize, y: usize) -> usize {
+pub fn rem(x: usize, y: usize) -> usize {
     x % y
 }

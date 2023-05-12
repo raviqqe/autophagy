@@ -315,4 +315,16 @@ mod tests {
 
         assert!(module.as_operation().verify());
     }
+
+    #[test]
+    fn rem() {
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &math::rem_function()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
 }
