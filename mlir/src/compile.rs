@@ -97,14 +97,12 @@ fn compile_primitive_type<'c>(context: &'c Context, name: &str) -> Type<'c> {
     }
 }
 
-// TODO Use this.
-#[allow(dead_code)]
-fn compile_block<'c>(
-    context: &'c Context,
+fn compile_block(
+    context: &Context,
     block: &syn::Block,
     function_scope: bool,
     variables: &mut TrainMap<String, Value>,
-) -> Result<Block<'c>, Error> {
+) -> Result<Region, Error> {
     let builder = Block::new(&[]);
     let mut variables = variables.fork();
 
@@ -116,7 +114,9 @@ fn compile_block<'c>(
         &mut variables,
     )?;
 
-    Ok(builder)
+    let region = Region::new();
+    region.append_block(builder);
+    Ok(region)
 }
 
 fn compile_statements<'a>(
@@ -196,12 +196,53 @@ fn compile_expression<'a>(
     expression: &syn::Expr,
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
+    let location = Location::unknown(context);
+
     Ok(match expression {
         syn::Expr::Binary(operation) => {
             compile_binary_operation(context, builder, operation, variables)?
                 .result(0)?
                 .into()
         }
+        syn::Expr::Block(block) => builder
+            .append_operation(scf::execute_region(
+                // TODO
+                &[Type::index(context)],
+                compile_block(context, &block.block, false, variables)?,
+                location,
+            ))
+            .result(0)?
+            .into(),
+        syn::Expr::If(r#if) => builder
+            .append_operation(scf::r#if(
+                compile_expression(context, builder, &r#if.cond, variables)?,
+                // TODO
+                &[Type::index(context)],
+                compile_block(context, &r#if.then_branch, false, variables)?,
+                if let Some((_, expression)) = &r#if.else_branch {
+                    let block = Block::new(&[]);
+                    let mut variables = variables.fork();
+
+                    block.append_operation(scf::r#yield(
+                        &[compile_expression(
+                            context,
+                            &block,
+                            expression,
+                            &mut variables,
+                        )?],
+                        location,
+                    ));
+
+                    let region = Region::new();
+                    region.append_block(block);
+                    region
+                } else {
+                    Region::new()
+                },
+                location,
+            ))
+            .result(0)?
+            .into(),
         syn::Expr::Lit(literal) => compile_expression_literal(context, builder, literal)?
             .result(0)?
             .into(),
@@ -537,6 +578,28 @@ mod tests {
         #[autophagy::instruction]
         fn foo() -> f64 {
             42f64
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn r#if() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> usize {
+            if true {
+                42usize
+            } else {
+                13usize
+            }
         }
 
         let context = create_context();
