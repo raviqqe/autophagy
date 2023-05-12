@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
 use std::error::Error;
-use syn::{Expr, ExprLit, FnArg, ItemFn, Lit, LitStr};
+use syn::{Expr, ExprLit, ItemFn, Lit, LitStr};
 
 const RAW_STRING_PREFIX: &str = "r#";
 
