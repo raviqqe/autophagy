@@ -126,37 +126,25 @@ fn compile_statements<'a>(
     function_scope: bool,
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
-    for statement in statements {
-        compile_statement(context, builder, statement, function_scope, variables)?;
-    }
-
-    Ok(())
-}
-
-fn compile_statement<'a>(
-    context: &Context,
-    builder: &'a Block,
-    statement: &syn::Stmt,
-    function_scope: bool,
-    variables: &mut TrainMap<String, Value<'a>>,
-) -> Result<(), Error> {
     let location = Location::unknown(context);
 
-    match statement {
-        syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
-        syn::Stmt::Item(_) => todo!(),
-        syn::Stmt::Expr(expression, semicolon) => {
-            let value = compile_expression(context, builder, expression, variables)?;
+    for (index, statement) in statements.iter().enumerate() {
+        match statement {
+            syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
+            syn::Stmt::Item(_) => todo!(),
+            syn::Stmt::Expr(expression, semicolon) => {
+                let value = compile_expression(context, builder, expression, variables)?;
 
-            if semicolon.is_none() {
-                builder.append_operation(if function_scope {
-                    func::r#return(&[value], location)
-                } else {
-                    scf::r#yield(&[value], location)
-                });
+                if index == statements.len() - 1 && semicolon.is_none() {
+                    builder.append_operation((if function_scope {
+                        func::r#return
+                    } else {
+                        scf::r#yield
+                    })(&[value], location));
+                }
             }
+            syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
         }
-        syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
     }
 
     Ok(())
@@ -457,6 +445,10 @@ mod tests {
         register_all_dialects(&registry);
 
         let context = Context::new();
+        context.attach_diagnostic_handler(|diagnostic| {
+            println!("{}", diagnostic);
+            true
+        });
         context.append_dialect_registry(&registry);
         context.load_all_available_dialects();
         register_all_llvm_translations(&context);
