@@ -1,3 +1,4 @@
+mod chain_map;
 mod compile;
 mod error;
 
