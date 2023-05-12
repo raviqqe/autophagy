@@ -34,7 +34,7 @@ pub fn generate(
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| ident.to_string());
     let visibility = &function.vis;
-    let variable_name = Ident::new(
+    let instruction_name = Ident::new(
         &(ident_string.clone() + "_instruction"),
         function.sig.ident.span(),
     );
@@ -45,11 +45,8 @@ pub fn generate(
     });
 
     Ok(quote! {
-        #visibility fn #variable_name() -> #crate_path::Instruction {
-            let stream = quote::quote!(#function);
-            let function = syn::parse2::<syn::ItemFn>(stream).unwrap();
-
-            #crate_path::Instruction::new(#name_string, function)
+        #visibility fn #instruction_name() -> #crate_path::Instruction {
+            #crate_path::Instruction::new(#name_string, syn::parse2(quote::quote!(#function)).unwrap())
         }
 
         #[cfg(test)]
@@ -58,7 +55,7 @@ pub fn generate(
 
             #[test]
             fn no_panic() {
-                #variable_name();
+                #instruction_name();
             }
         }
 
