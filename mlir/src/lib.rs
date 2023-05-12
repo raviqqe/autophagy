@@ -7,16 +7,16 @@ pub use error::Error;
 #[cfg(test)]
 mod tests {
     use melior::{
-        dialect,
+        dialect::DialectRegistry,
         ir::Module,
-        pass,
+        pass::{self, PassManager},
         utility::{register_all_dialects, register_all_llvm_translations},
         Context, ExecutionEngine,
     };
 
     #[test]
     fn run() {
-        let registry = dialect::Registry::new();
+        let registry = DialectRegistry::new();
         register_all_dialects(&registry);
 
         let context = Context::new();
@@ -37,12 +37,12 @@ mod tests {
         )
         .unwrap();
 
-        let pass_manager = pass::Manager::new(&context);
-        pass_manager.add_pass(pass::conversion::convert_func_to_llvm());
+        let pass_manager = PassManager::new(&context);
+        pass_manager.add_pass(pass::conversion::create_func_to_llvm());
 
         pass_manager
             .nested_under("func.func")
-            .add_pass(pass::conversion::arith_to_llvm());
+            .add_pass(pass::conversion::create_arith_to_llvm());
 
         assert_eq!(pass_manager.run(&mut module), Ok(()));
 
