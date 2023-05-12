@@ -97,8 +97,8 @@ fn compile_primitive_type<'c>(context: &'c Context, name: &str) -> Type<'c> {
     }
 }
 
-fn compile_block<'c>(
-    context: &'c Context,
+fn compile_block(
+    context: &Context,
     block: &syn::Block,
     function_scope: bool,
     variables: &mut TrainMap<String, Value>,
@@ -196,7 +196,7 @@ fn compile_expression<'a>(
     expression: &syn::Expr,
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
-    let location = Location::unknown(&context);
+    let location = Location::unknown(context);
 
     Ok(match expression {
         syn::Expr::Binary(operation) => {
@@ -207,7 +207,7 @@ fn compile_expression<'a>(
         syn::Expr::Block(block) => builder
             .append_operation(scf::execute_region(
                 // TODO
-                &[Type::index(&context)],
+                &[Type::index(context)],
                 compile_block(context, &block.block, false, variables)?,
                 location,
             ))
@@ -217,7 +217,7 @@ fn compile_expression<'a>(
             .append_operation(scf::r#if(
                 compile_expression(context, builder, &r#if.cond, variables)?,
                 // TODO
-                &[Type::index(&context)],
+                &[Type::index(context)],
                 compile_block(context, &r#if.then_branch, false, variables)?,
                 if let Some((_, expression)) = &r#if.else_branch {
                     let block = Block::new(&[]);
@@ -227,7 +227,7 @@ fn compile_expression<'a>(
                         &[compile_expression(
                             context,
                             &block,
-                            &expression,
+                            expression,
                             &mut variables,
                         )?],
                         location,
