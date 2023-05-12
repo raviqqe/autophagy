@@ -47,9 +47,8 @@ pub fn generate(
     Ok(quote! {
         #visibility fn #variable_name() -> #crate_path::Instruction {
             let stream = quote::quote!(#function);
-            let function = syn::parse2::<syn::ItemFn>(stream).unwrap();
 
-            #crate_path::Instruction::new(#name_string, function)
+            #crate_path::Instruction::new(#name_string, syn::parse2::<syn::ItemFn>(stream).unwrap())
         }
 
         #[cfg(test)]
