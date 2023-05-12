@@ -182,6 +182,7 @@ fn compile_binary_operation<'a>(
     let left = compile_expression(context, builder, &operation.left, variables)?;
     let right = compile_expression(context, builder, &operation.right, variables)?;
 
+    // spell-checker: disable
     Ok(builder.append_operation(match &operation.op {
         syn::BinOp::Add(_) => arith::addi(left, right, location),
         syn::BinOp::Sub(_) => arith::subi(left, right, location),
@@ -190,6 +191,7 @@ fn compile_binary_operation<'a>(
         syn::BinOp::Rem(_) => arith::remsi(left, right, location),
         _ => todo!(),
     }))
+    // spell-checker: enable
 }
 
 fn compile_expression_literal<'a>(
