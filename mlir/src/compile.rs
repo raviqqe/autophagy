@@ -204,10 +204,20 @@ fn compile_expression<'a>(
                 .result(0)?
                 .into()
         }
+        syn::Expr::Block(block) => builder
+            .append_operation(scf::execute_region(
+                // TODO
+                &[Type::index(&context)],
+                compile_block(context, &block.block, false, variables)?,
+                location,
+            ))
+            .result(0)?
+            .into(),
         syn::Expr::If(r#if) => builder
             .append_operation(scf::r#if(
                 compile_expression(context, builder, &r#if.cond, variables)?,
-                &[],
+                // TODO
+                &[Type::index(&context)],
                 compile_block(context, &r#if.then_branch, false, variables)?,
                 if let Some((_, expression)) = &r#if.else_branch {
                     let block = Block::new(&[]);
@@ -568,6 +578,28 @@ mod tests {
         #[autophagy::instruction]
         fn foo() -> f64 {
             42f64
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn r#if() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> usize {
+            if true {
+                42usize
+            } else {
+                13usize
+            }
         }
 
         let context = create_context();
