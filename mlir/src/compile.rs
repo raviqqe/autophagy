@@ -359,7 +359,7 @@ fn compile_path<'a>(
             .get(&name)
             .ok_or(Error::VariableNotDefined(name))?
     } else {
-        todo!()
+        return Err(Error::NotSupported("non-identifier path"));
     })
 }
 
