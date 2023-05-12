@@ -252,8 +252,8 @@ fn compile_expression<'a>(
                 .result(0)?
                 .into()
         }
-        syn::Expr::While(r#while) => builder
-            .append_operation(scf::r#while(
+        syn::Expr::While(r#while) => {
+            builder.append_operation(scf::r#while(
                 &[],
                 &[],
                 {
@@ -272,9 +272,10 @@ fn compile_expression<'a>(
                 },
                 compile_block(context, &r#while.body, false, variables)?,
                 location,
-            ))
-            .result(0)?
-            .into(),
+            ));
+
+            compile_unit(context, builder)?
+        }
         _ => todo!(),
     })
 }
@@ -426,6 +427,17 @@ fn compile_path<'a>(
     } else {
         return Err(Error::NotSupported("non-identifier path"));
     })
+}
+
+fn compile_unit<'a>(context: &Context, builder: &'a Block) -> Result<Value<'a>, Error> {
+    Ok(builder
+        .append_operation(arith::constant(
+            context,
+            IntegerAttribute::new(0, IntegerType::new(context, 1).into()).into(),
+            Location::unknown(context),
+        ))
+        .result(0)?
+        .into())
 }
 
 #[cfg(test)]
