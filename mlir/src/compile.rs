@@ -260,13 +260,9 @@ fn compile_expression<'a>(
                     let block = Block::new(&[]);
                     let mut variables = variables.fork();
 
-                    block.append_operation(scf::r#yield(
-                        &[compile_expression(
-                            context,
-                            &block,
-                            expression,
-                            &mut variables,
-                        )?],
+                    block.append_operation(scf::condition(
+                        compile_expression(context, builder, &r#while.cond, &mut variables)?,
+                        &[],
                         location,
                     ));
 
