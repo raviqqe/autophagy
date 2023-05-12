@@ -495,7 +495,25 @@ mod tests {
     }
 
     #[test]
-    fn float() {
+    fn float32() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> f32 {
+            42f32
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn float64() {
         #[allow(dead_code)]
         #[autophagy::instruction]
         fn foo() -> f64 {
