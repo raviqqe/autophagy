@@ -652,4 +652,25 @@ mod tests {
 
         assert!(module.as_operation().verify());
     }
+
+    #[test]
+    fn r#while() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> usize {
+            #[allow(while_true)]
+            while true {}
+
+            42usize
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
 }
