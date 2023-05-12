@@ -13,25 +13,25 @@ use melior::{
 pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> {
     let function = instruction.r#fn();
     let context = &module.context();
-    let location = Location::unknown(&context);
+    let location = Location::unknown(context);
     let argument_types = function
         .sig
         .inputs
         .iter()
         .map(|argument| match argument {
-            syn::FnArg::Typed(typed) => compile_type(&context, &typed.ty),
+            syn::FnArg::Typed(typed) => compile_type(context, &typed.ty),
             syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
         })
         .collect::<Result<Vec<_>, _>>()?;
     let result_types = match &function.sig.output {
         syn::ReturnType::Default => vec![],
-        syn::ReturnType::Type(_, r#type) => vec![compile_type(&context, &r#type)?],
+        syn::ReturnType::Type(_, r#type) => vec![compile_type(context, r#type)?],
     };
 
     module.body().append_operation(func::func(
-        &context,
-        StringAttribute::new(&context, &function.sig.ident.to_string()),
-        TypeAttribute::new(FunctionType::new(&context, &argument_types, &result_types).into()),
+        context,
+        StringAttribute::new(context, &function.sig.ident.to_string()),
+        TypeAttribute::new(FunctionType::new(context, &argument_types, &result_types).into()),
         {
             let block = Block::new(
                 &argument_types
@@ -74,8 +74,8 @@ fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>
         syn::Type::Path(path) => {
             if let Some(identifier) = path.path.get_ident() {
                 match identifier.to_string().as_str() {
-                    "i64" | "u64" => IntegerType::new(&context, 64).into(),
-                    "isize" | "usize" => Type::index(&context),
+                    "i64" | "u64" => IntegerType::new(context, 64).into(),
+                    "isize" | "usize" => Type::index(context),
                     _ => todo!(),
                 }
             } else {
@@ -114,7 +114,7 @@ fn compile_statements<'a>(
     variables: &mut ChainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     for statement in statements {
-        compile_statement(&context, &builder, statement, function_scope, variables)?;
+        compile_statement(context, builder, statement, function_scope, variables)?;
     }
 
     Ok(())
@@ -176,8 +176,8 @@ fn compile_binary_operation<'a>(
     variables: &mut ChainMap<String, Value<'a>>,
 ) -> Result<OperationRef<'a>, Error> {
     let location = Location::unknown(context);
-    let left = compile_expression(&context, builder, &operation.left, variables)?;
-    let right = compile_expression(&context, builder, &operation.right, variables)?;
+    let left = compile_expression(context, builder, &operation.left, variables)?;
+    let right = compile_expression(context, builder, &operation.right, variables)?;
 
     Ok(builder.append_operation(match &operation.op {
         syn::BinOp::Add(_) => arith::addi(left, right, location),
@@ -202,7 +202,7 @@ fn compile_expression_literal<'a>(
         syn::Lit::Int(integer) => arith::constant(
             context,
             IntegerAttribute::new(
-                integer.base10_parse::<i64>()? as i64,
+                integer.base10_parse::<i64>()?,
                 match integer.suffix() {
                     "" => Type::index(context),
                     "i8" | "u8" => IntegerType::new(context, 8).into(),
@@ -232,7 +232,7 @@ fn compile_path<'a>(
 
         *variables
             .get(&name)
-            .ok_or_else(|| Error::VariableNotDefined(name))?
+            .ok_or(Error::VariableNotDefined(name))?
     } else {
         todo!()
     })
