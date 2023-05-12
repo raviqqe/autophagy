@@ -126,37 +126,32 @@ fn compile_statements<'a>(
     function_scope: bool,
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
-    for statement in statements {
-        compile_statement(context, builder, statement, function_scope, variables)?;
+    let location = Location::unknown(context);
+    let terminator = if function_scope {
+        func::r#return
+    } else {
+        scf::r#yield
+    };
+    let mut terminated = false;
+
+    for (index, statement) in statements.iter().enumerate() {
+        match statement {
+            syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
+            syn::Stmt::Item(_) => return Err(Error::NotSupported("local item definition")),
+            syn::Stmt::Expr(expression, semicolon) => {
+                let value = compile_expression(context, builder, expression, variables)?;
+
+                if index == statements.len() - 1 && semicolon.is_none() {
+                    builder.append_operation(terminator(&[value], location));
+                    terminated = true;
+                }
+            }
+            syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
+        }
     }
 
-    Ok(())
-}
-
-fn compile_statement<'a>(
-    context: &Context,
-    builder: &'a Block,
-    statement: &syn::Stmt,
-    function_scope: bool,
-    variables: &mut TrainMap<String, Value<'a>>,
-) -> Result<(), Error> {
-    let location = Location::unknown(context);
-
-    match statement {
-        syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
-        syn::Stmt::Item(_) => todo!(),
-        syn::Stmt::Expr(expression, semicolon) => {
-            let value = compile_expression(context, builder, expression, variables)?;
-
-            if semicolon.is_none() {
-                builder.append_operation(if function_scope {
-                    func::r#return(&[value], location)
-                } else {
-                    scf::r#yield(&[value], location)
-                });
-            }
-        }
-        syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
+    if !terminated {
+        builder.append_operation(terminator(&[], location));
     }
 
     Ok(())
@@ -251,6 +246,30 @@ fn compile_expression<'a>(
             compile_unary_operation(context, builder, operation, variables)?
                 .result(0)?
                 .into()
+        }
+        syn::Expr::While(r#while) => {
+            builder.append_operation(scf::r#while(
+                &[],
+                &[],
+                {
+                    let block = Block::new(&[]);
+                    let mut variables = variables.fork();
+
+                    block.append_operation(scf::condition(
+                        compile_expression(context, builder, &r#while.cond, &mut variables)?,
+                        &[],
+                        location,
+                    ));
+
+                    let region = Region::new();
+                    region.append_block(block);
+                    region
+                },
+                compile_block(context, &r#while.body, false, variables)?,
+                location,
+            ));
+
+            compile_unit(context, builder)?
         }
         _ => todo!(),
     })
@@ -405,6 +424,18 @@ fn compile_path<'a>(
     })
 }
 
+// TODO Use a zero-sized type. (LLVM struct?)
+fn compile_unit<'a>(context: &Context, builder: &'a Block) -> Result<Value<'a>, Error> {
+    Ok(builder
+        .append_operation(arith::constant(
+            context,
+            IntegerAttribute::new(0, IntegerType::new(context, 1).into()).into(),
+            Location::unknown(context),
+        ))
+        .result(0)?
+        .into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,6 +452,10 @@ mod tests {
         register_all_dialects(&registry);
 
         let context = Context::new();
+        context.attach_diagnostic_handler(|diagnostic| {
+            println!("{}", diagnostic);
+            true
+        });
         context.append_dialect_registry(&registry);
         context.load_all_available_dialects();
         register_all_llvm_translations(&context);
@@ -617,6 +652,27 @@ mod tests {
         #[allow(dead_code)]
         #[autophagy::instruction]
         fn foo() -> usize {
+            42usize
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn r#while() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> usize {
+            #[allow(while_true)]
+            while true {}
+
             42usize
         }
 
