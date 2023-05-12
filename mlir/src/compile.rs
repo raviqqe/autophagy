@@ -262,8 +262,7 @@ fn compile_expression<'a>(
                 )?],
                 // TODO
                 &[Type::index(context)],
-                compile_block(context, &r#if.then_branch, false, variables)?,
-                if let Some((_, expression)) = &r#if.else_branch {
+                {
                     let block = Block::new(&[]);
                     let mut variables = variables.fork();
 
@@ -280,9 +279,8 @@ fn compile_expression<'a>(
                     let region = Region::new();
                     region.append_block(block);
                     region
-                } else {
-                    Region::new()
                 },
+                compile_block(context, &r#while.body, false, variables)?,
                 location,
             ))
             .result(0)?
