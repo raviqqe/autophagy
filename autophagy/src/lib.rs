@@ -1,5 +1,5 @@
 mod instruction;
-pub mod instructions;
+pub mod math;
 
 pub use autophagy_macro::*;
 pub use instruction::Instruction;
