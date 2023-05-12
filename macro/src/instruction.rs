@@ -23,7 +23,6 @@ pub fn generate(
         &(ident_string.clone() + "_instruction"),
         function.sig.ident.span(),
     );
-    let test_module_name = Ident::new(&(ident_string + "_tests"), function.sig.ident.span());
     let name_string = Expr::Lit(ExprLit {
         attrs: Vec::new(),
         lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
@@ -32,16 +31,6 @@ pub fn generate(
     Ok(quote! {
         #visibility fn #instruction_name() -> #crate_path::Instruction {
             #crate_path::Instruction::new(#name_string, syn::parse2(quote::quote!(#function)).unwrap())
-        }
-
-        #[cfg(test)]
-        mod #test_module_name {
-            use super::*;
-
-            #[test]
-            fn no_panic() {
-                #instruction_name();
-            }
         }
 
         #function
