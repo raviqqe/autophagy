@@ -9,7 +9,7 @@ permissions:
   pages: write
   id-token: write
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
