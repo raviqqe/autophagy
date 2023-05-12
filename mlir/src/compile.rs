@@ -186,8 +186,8 @@ fn compile_binary_operation<'a>(
         syn::BinOp::Add(_) => arith::addi(left, right, location),
         syn::BinOp::Sub(_) => arith::subi(left, right, location),
         syn::BinOp::Mul(_) => arith::muli(left, right, location),
-        syn::BinOp::Div(_) => arith::divui(left, right, location),
-        syn::BinOp::Rem(_) => arith::rem(left, right, location),
+        syn::BinOp::Div(_) => arith::divsi(left, right, location),
+        syn::BinOp::Rem(_) => arith::remsi(left, right, location),
         _ => todo!(),
     }))
 }
