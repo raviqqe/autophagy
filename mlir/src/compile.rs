@@ -429,6 +429,7 @@ fn compile_path<'a>(
     })
 }
 
+// TODO Use a zero-sized type. (LLVM struct?)
 fn compile_unit<'a>(context: &Context, builder: &'a Block) -> Result<Value<'a>, Error> {
     Ok(builder
         .append_operation(arith::constant(
