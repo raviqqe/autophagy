@@ -254,7 +254,12 @@ fn compile_expression<'a>(
         }
         syn::Expr::While(r#while) => builder
             .append_operation(scf::r#while(
-                compile_expression(context, builder, &r#while.cond, variables)?,
+                &[compile_expression(
+                    context,
+                    builder,
+                    &r#while.cond,
+                    variables,
+                )?],
                 // TODO
                 &[Type::index(context)],
                 compile_block(context, &r#if.then_branch, false, variables)?,
