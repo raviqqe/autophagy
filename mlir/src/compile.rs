@@ -323,7 +323,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::rem_function()).unwrap();
+        compile(&module, &math::rem_instruction()).unwrap();
 
         assert!(module.as_operation().verify());
     }
