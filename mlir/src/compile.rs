@@ -1,4 +1,4 @@
-use crate::{chain_map::ChainMap, Error};
+use crate::Error;
 use autophagy::Instruction;
 use melior::{
     dialect::{arith, func, scf},
@@ -9,6 +9,7 @@ use melior::{
     },
     Context,
 };
+use train_map::TrainMap;
 
 pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> {
     let function = instruction.r#fn();
@@ -39,7 +40,7 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
                     .map(|&r#type| (r#type, location))
                     .collect::<Vec<_>>(),
             );
-            let mut variables = ChainMap::new();
+            let mut variables = TrainMap::new();
 
             for (index, name) in function
                 .sig
@@ -92,7 +93,7 @@ fn compile_block<'c>(
     context: &'c Context,
     block: &syn::Block,
     function_scope: bool,
-    variables: &mut ChainMap<String, Value>,
+    variables: &mut TrainMap<String, Value>,
 ) -> Result<Block<'c>, Error> {
     let builder = Block::new(&[]);
     let mut variables = variables.fork();
@@ -113,7 +114,7 @@ fn compile_statements<'a>(
     builder: &'a Block,
     statements: &[syn::Stmt],
     function_scope: bool,
-    variables: &mut ChainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     for statement in statements {
         compile_statement(context, builder, statement, function_scope, variables)?;
@@ -127,7 +128,7 @@ fn compile_statement<'a>(
     builder: &'a Block,
     statement: &syn::Stmt,
     function_scope: bool,
-    variables: &mut ChainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     let location = Location::unknown(context);
 
@@ -155,7 +156,7 @@ fn compile_expression<'a>(
     context: &Context,
     builder: &'a Block,
     expression: &syn::Expr,
-    variables: &mut ChainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
     Ok(match expression {
         syn::Expr::Binary(operation) => {
@@ -175,7 +176,7 @@ fn compile_binary_operation<'a>(
     context: &Context,
     builder: &'a Block,
     operation: &syn::ExprBinary,
-    variables: &mut ChainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<OperationRef<'a>, Error> {
     let location = Location::unknown(context);
     let left = compile_expression(context, builder, &operation.left, variables)?;
@@ -227,7 +228,7 @@ fn compile_expression_literal<'a>(
 
 fn compile_path<'a>(
     path: &syn::ExprPath,
-    variables: &ChainMap<String, Value<'a>>,
+    variables: &TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
     Ok(if let Some(identifier) = path.path.get_ident() {
         let name = identifier.to_string();
