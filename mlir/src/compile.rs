@@ -86,6 +86,8 @@ fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>
     })
 }
 
+// TODO Use this.
+#[allow(dead_code)]
 fn compile_block<'c>(
     context: &'c Context,
     block: &syn::Block,
