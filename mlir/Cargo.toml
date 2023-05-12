@@ -7,3 +7,4 @@ edition = "2021"
 autophagy = { version = "0.1", path = "../autophagy" }
 melior = "0.7"
 syn = "2.0.15"
+train-map = "0.1.0"
