@@ -133,9 +133,7 @@ fn compile_statement<'a>(
     let location = Location::unknown(context);
 
     match statement {
-        syn::Stmt::Local(local) => {
-            compile_local_binding(context, builder, local, function_scope, variables)?
-        }
+        syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
         syn::Stmt::Item(_) => todo!(),
         syn::Stmt::Expr(expression, semicolon) => {
             let value = compile_expression(context, builder, expression, variables)?;
@@ -158,7 +156,6 @@ fn compile_local_binding<'a>(
     context: &Context,
     builder: &'a Block,
     local: &syn::Local,
-    function_scope: bool,
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     let value = compile_expression(
