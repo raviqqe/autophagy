@@ -7,3 +7,11 @@ pub fn compile(_module: &Module, instruction: &Instruction) -> Result<(), Error>
 
     todo!()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add() {}
+}
