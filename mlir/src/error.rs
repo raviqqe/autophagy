@@ -4,9 +4,10 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum Error {
     AddInstruction(String),
+    Syn(syn::Error),
 }
 
 impl Display for Error {
@@ -15,8 +16,15 @@ impl Display for Error {
             Self::AddInstruction(name) => {
                 write!(formatter, "failed to add instruction: {}", name)
             }
+            Self::Syn(error) => write!(formatter, "{}", error),
         }
     }
 }
 
 impl error::Error for Error {}
+
+impl From<syn::Error> for Error {
+    fn from(error: syn::Error) -> Self {
+        Self::Syn(error)
+    }
+}

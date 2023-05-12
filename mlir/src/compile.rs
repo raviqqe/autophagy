@@ -1,10 +1,10 @@
 use crate::Error;
 use autophagy::Instruction;
 use melior::{
-    dialect::{func, scf},
+    dialect::{arith, func, scf},
     ir::{
-        attribute::{StringAttribute, TypeAttribute},
-        r#type::FunctionType,
+        attribute::{IntegerAttribute, StringAttribute, TypeAttribute},
+        r#type::{FunctionType, IntegerType},
         Block, Location, Module, OperationRef, Region,
     },
     Context,
@@ -87,16 +87,30 @@ fn compile_expression_literal<'a>(
     builder: &'a Block,
     literal: &syn::ExprLit,
 ) -> Result<OperationRef<'a>, Error> {
-    match &literal.lit {
-        syn::Lit::Bool(_) => todo!(),
+    let location = Location::unknown(context);
+
+    Ok(builder.append_operation(match &literal.lit {
+        syn::Lit::Bool(boolean) => arith::constant(
+            context,
+            IntegerAttribute::new(boolean.value as i64, IntegerType::new(context, 1).into()).into(),
+            location,
+        ),
         syn::Lit::Char(_) => todo!(),
-        syn::Lit::Int(_) => todo!(),
+        syn::Lit::Int(integer) => arith::constant(
+            context,
+            IntegerAttribute::new(
+                integer.base10_parse::<i64>()? as i64,
+                IntegerType::new(context, 1).into(),
+            )
+            .into(),
+            location,
+        ),
         syn::Lit::Float(_) => todo!(),
         syn::Lit::Str(_) => todo!(),
         syn::Lit::ByteStr(_) => todo!(),
         syn::Lit::Byte(_) => todo!(),
         _ => todo!(),
-    }
+    }))
 }
 
 #[cfg(test)]
