@@ -55,7 +55,7 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
                 })
                 .enumerate()
             {
-                variables.insert(name?, block.argument(index).unwrap().into());
+                variables.insert(name?, block.argument(index)?.into());
             }
 
             compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
@@ -168,8 +168,56 @@ fn compile_expression<'a>(
             .result(0)?
             .into(),
         syn::Expr::Path(path) => compile_path(path, variables)?,
+        syn::Expr::Unary(operation) => {
+            compile_unary_operation(context, builder, operation, variables)?
+                .result(0)?
+                .into()
+        }
         _ => todo!(),
     })
+}
+
+fn compile_unary_operation<'a>(
+    context: &Context,
+    builder: &'a Block,
+    operation: &syn::ExprUnary,
+    variables: &mut TrainMap<String, Value<'a>>,
+) -> Result<OperationRef<'a>, Error> {
+    let location = Location::unknown(context);
+    let value = compile_expression(context, builder, &operation.expr, variables)?;
+
+    // spell-checker: disable
+    Ok(builder.append_operation(match &operation.op {
+        syn::UnOp::Deref(_) => todo!(),
+        syn::UnOp::Neg(_) => arith::subi(
+            builder
+                .append_operation(arith::constant(
+                    context,
+                    IntegerAttribute::new(0, Type::index(context)).into(),
+                    location,
+                ))
+                .result(0)
+                .unwrap()
+                .into(),
+            value,
+            location,
+        ),
+        syn::UnOp::Not(_) => arith::xori(
+            builder
+                .append_operation(arith::constant(
+                    context,
+                    IntegerAttribute::new(0, Type::index(context)).into(),
+                    location,
+                ))
+                .result(0)
+                .unwrap()
+                .into(),
+            value,
+            location,
+        ),
+        _ => return Err(Error::NotSupported("unknown unary operator")),
+    }))
+    // spell-checker: enable
 }
 
 fn compile_binary_operation<'a>(
@@ -212,7 +260,7 @@ fn compile_binary_operation<'a>(
         syn::BinOp::BitOrAssign(_) => todo!(),
         syn::BinOp::ShlAssign(_) => todo!(),
         syn::BinOp::ShrAssign(_) => todo!(),
-        _ => return Err(Error::NotSupported("unknown operator")),
+        _ => return Err(Error::NotSupported("unknown binary operator")),
     }))
     // spell-checker: enable
 }
