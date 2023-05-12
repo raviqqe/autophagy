@@ -100,7 +100,7 @@ fn compile_expression_literal<'a>(
             context,
             IntegerAttribute::new(
                 integer.base10_parse::<i64>()? as i64,
-                IntegerType::new(context, 1).into(),
+                IntegerType::new(context, 64).into(),
             )
             .into(),
             location,
