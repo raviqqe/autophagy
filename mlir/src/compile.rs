@@ -260,8 +260,7 @@ fn compile_expression<'a>(
                     &r#while.cond,
                     variables,
                 )?],
-                // TODO
-                &[Type::index(context)],
+                &[],
                 {
                     let block = Block::new(&[]);
                     let mut variables = variables.fork();
