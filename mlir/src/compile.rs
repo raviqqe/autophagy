@@ -14,7 +14,6 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
     let function = instruction.r#fn();
     let context = &module.context();
     let location = Location::unknown(&context);
-    let mut variables = ChainMap::new();
     let argument_types = function
         .sig
         .inputs
@@ -34,13 +33,34 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
         StringAttribute::new(&context, &function.sig.ident.to_string()),
         TypeAttribute::new(FunctionType::new(&context, &argument_types, &result_types).into()),
         {
+            let block = Block::new(
+                &argument_types
+                    .iter()
+                    .map(|&r#type| (r#type, location))
+                    .collect::<Vec<_>>(),
+            );
+            let mut variables = ChainMap::new();
+
+            for (index, name) in function
+                .sig
+                .inputs
+                .iter()
+                .map(|argument| match argument {
+                    syn::FnArg::Typed(typed) => Ok(match typed.pat.as_ref() {
+                        syn::Pat::Ident(identifier) => identifier.ident.to_string(),
+                        _ => todo!(),
+                    }),
+                    syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
+                })
+                .enumerate()
+            {
+                variables.insert(name?, block.argument(index).unwrap().into());
+            }
+
+            compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
+
             let region = Region::new();
-            region.append_block(compile_block(
-                &context,
-                &function.block,
-                true,
-                &mut variables,
-            )?);
+            region.append_block(block);
             region
         },
         location,
@@ -75,17 +95,29 @@ fn compile_block<'c>(
     let builder = Block::new(&[]);
     let mut variables = variables.fork();
 
-    for statement in &block.stmts {
-        compile_statement(
-            &context,
-            &builder,
-            statement,
-            function_scope,
-            &mut variables,
-        )?;
-    }
+    compile_statements(
+        context,
+        &builder,
+        &block.stmts,
+        function_scope,
+        &mut variables,
+    )?;
 
     Ok(builder)
+}
+
+fn compile_statements<'a>(
+    context: &Context,
+    builder: &'a Block,
+    statements: &[syn::Stmt],
+    function_scope: bool,
+    variables: &mut ChainMap<String, Value<'a>>,
+) -> Result<(), Error> {
+    for statement in statements {
+        compile_statement(&context, &builder, statement, function_scope, variables)?;
+    }
+
+    Ok(())
 }
 
 fn compile_statement<'a>(
@@ -132,7 +164,7 @@ fn compile_expression<'a>(
         syn::Expr::Lit(literal) => compile_expression_literal(context, builder, literal)?
             .result(0)?
             .into(),
-        syn::Expr::Path(path) => compile_path(context, builder, path, variables)?,
+        syn::Expr::Path(path) => compile_path(path, variables)?,
         _ => todo!(),
     })
 }
@@ -192,13 +224,9 @@ fn compile_expression_literal<'a>(
 }
 
 fn compile_path<'a>(
-    context: &Context,
-    builder: &Block,
     path: &syn::ExprPath,
     variables: &ChainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
-    let location = Location::unknown(context);
-
     Ok(if let Some(identifier) = path.path.get_ident() {
         let name = identifier.to_string();
 
@@ -241,5 +269,7 @@ mod tests {
         let module = Module::new(location);
 
         compile(&module, &math::add_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
     }
 }
