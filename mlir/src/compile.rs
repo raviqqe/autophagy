@@ -47,10 +47,10 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
                 .inputs
                 .iter()
                 .map(|argument| match argument {
-                    syn::FnArg::Typed(typed) => Ok(match typed.pat.as_ref() {
-                        syn::Pat::Ident(identifier) => identifier.ident.to_string(),
+                    syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
+                        syn::Pat::Ident(identifier) => Ok(identifier.ident.to_string()),
                         _ => Err(Error::NotSupported("non-identifier pattern")),
-                    }),
+                    },
                     syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
                 })
                 .enumerate()
