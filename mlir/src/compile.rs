@@ -127,6 +127,12 @@ fn compile_statements<'a>(
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     let location = Location::unknown(context);
+    let terminator = if function_scope {
+        func::r#return
+    } else {
+        scf::r#yield
+    };
+    let mut terminated = false;
 
     for (index, statement) in statements.iter().enumerate() {
         match statement {
@@ -136,15 +142,16 @@ fn compile_statements<'a>(
                 let value = compile_expression(context, builder, expression, variables)?;
 
                 if index == statements.len() - 1 && semicolon.is_none() {
-                    builder.append_operation((if function_scope {
-                        func::r#return
-                    } else {
-                        scf::r#yield
-                    })(&[value], location));
+                    builder.append_operation(terminator(&[value], location));
+                    terminated = true;
                 }
             }
             syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
         }
+    }
+
+    if !terminated {
+        builder.append_operation(terminator(&[], location));
     }
 
     Ok(())
