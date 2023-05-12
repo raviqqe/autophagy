@@ -161,12 +161,24 @@ fn compile_local_binding<'a>(
     function_scope: bool,
     variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
-    let location = Location::unknown(context);
-    let identifier = match &local.pat {
-        syn::Pat::Ident(identifier) => identifier.ident.to_string(),
-        _ => return Err(Error::NotSupported("non-identifier pattern")),
-    };
-    let value = compile_expression(context, builder, variables)?;
+    let value = compile_expression(
+        context,
+        builder,
+        if let Some(initial) = &local.init {
+            &initial.expr
+        } else {
+            return Err(Error::NotSupported("uninitialized let binding"));
+        },
+        variables,
+    )?;
+
+    variables.insert(
+        match &local.pat {
+            syn::Pat::Ident(identifier) => identifier.ident.to_string(),
+            _ => return Err(Error::NotSupported("non-identifier pattern")),
+        },
+        value,
+    );
 
     Ok(())
 }
