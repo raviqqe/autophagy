@@ -46,10 +46,7 @@ pub fn generate(
 
     Ok(quote! {
         #visibility fn #variable_name() -> #crate_path::Instruction {
-            #crate_path::Instruction::new(
-                #name_string,
-                syn::parse2::<syn::ItemFn>(quote::quote!(#function)).unwrap(),
-            )
+            #crate_path::Instruction::new(#name_string, syn::parse2(quote::quote!(#function)).unwrap())
         }
 
         #[cfg(test)]
