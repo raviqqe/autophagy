@@ -74,17 +74,24 @@ fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>
     Ok(match r#type {
         syn::Type::Path(path) => {
             if let Some(identifier) = path.path.get_ident() {
-                match identifier.to_string().as_str() {
-                    "i64" | "u64" => IntegerType::new(context, 64).into(),
-                    "isize" | "usize" => Type::index(context),
-                    _ => todo!(),
-                }
+                compile_primitive_type(context, &identifier.to_string())
             } else {
                 return Err(Error::NotSupported("custom type"));
             }
         }
         _ => todo!(),
     })
+}
+
+fn compile_primitive_type<'c>(context: &'c Context, name: &str) -> Type<'c> {
+    match name {
+        "isize" | "usize" => Type::index(context),
+        "i8" | "u8" => IntegerType::new(context, 8).into(),
+        "i16" | "u16" => IntegerType::new(context, 16).into(),
+        "i32" | "u32" => IntegerType::new(context, 32).into(),
+        "i64" | "u64" => IntegerType::new(context, 64).into(),
+        _ => todo!(),
+    }
 }
 
 // TODO Use this.
@@ -312,12 +319,8 @@ fn compile_expression_literal<'a>(
             IntegerAttribute::new(
                 integer.base10_parse::<i64>()?,
                 match integer.suffix() {
-                    "" | "isize" | "usize" => Type::index(context),
-                    "i8" | "u8" => IntegerType::new(context, 8).into(),
-                    "i16" | "u16" => IntegerType::new(context, 16).into(),
-                    "i32" | "u32" => IntegerType::new(context, 32).into(),
-                    "i64" | "u64" => IntegerType::new(context, 64).into(),
-                    _ => todo!(),
+                    "" => Type::index(context),
+                    name => compile_primitive_type(context, name),
                 },
             )
             .into(),
