@@ -252,6 +252,36 @@ fn compile_expression<'a>(
                 .result(0)?
                 .into()
         }
+        syn::Expr::While(r#while) => builder
+            .append_operation(scf::r#while(
+                compile_expression(context, builder, &r#while.cond, variables)?,
+                // TODO
+                &[Type::index(context)],
+                compile_block(context, &r#if.then_branch, false, variables)?,
+                if let Some((_, expression)) = &r#if.else_branch {
+                    let block = Block::new(&[]);
+                    let mut variables = variables.fork();
+
+                    block.append_operation(scf::r#yield(
+                        &[compile_expression(
+                            context,
+                            &block,
+                            expression,
+                            &mut variables,
+                        )?],
+                        location,
+                    ));
+
+                    let region = Region::new();
+                    region.append_block(block);
+                    region
+                } else {
+                    Region::new()
+                },
+                location,
+            ))
+            .result(0)?
+            .into(),
         _ => todo!(),
     })
 }
