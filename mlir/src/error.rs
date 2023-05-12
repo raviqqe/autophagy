@@ -10,6 +10,7 @@ pub enum Error {
     Melior(melior::Error),
     Syn(syn::Error),
     VariableNotDefined(String),
+    NotSupported(&'static str),
 }
 
 impl Display for Error {
@@ -19,6 +20,9 @@ impl Display for Error {
                 write!(formatter, "failed to add instruction: {}", name)
             }
             Self::Melior(error) => write!(formatter, "{}", error),
+            Self::NotSupported(name) => {
+                write!(formatter, "{name} not supported")
+            }
             Self::Syn(error) => write!(formatter, "{}", error),
             Self::VariableNotDefined(name) => {
                 write!(formatter, "variable not defined: {name}")

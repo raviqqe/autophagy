@@ -15,11 +15,24 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
     let context = &module.context();
     let location = Location::unknown(&context);
     let mut variables = ChainMap::new();
+    let argument_types = function
+        .sig
+        .inputs
+        .iter()
+        .map(|argument| match argument {
+            syn::FnArg::Typed(typed) => compile_type(&context, &typed.ty),
+            syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let result_types = match &function.sig.output {
+        syn::ReturnType::Default => vec![],
+        syn::ReturnType::Type(_, r#type) => vec![compile_type(&context, &r#type)?],
+    };
 
     module.body().append_operation(func::func(
         &context,
         StringAttribute::new(&context, &function.sig.ident.to_string()),
-        TypeAttribute::new(FunctionType::new(&context, &[], &[]).into()),
+        TypeAttribute::new(FunctionType::new(&context, &argument_types, &result_types).into()),
         {
             let region = Region::new();
             region.append_block(compile_block(
@@ -34,6 +47,23 @@ pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> 
     ));
 
     Ok(())
+}
+
+fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>, Error> {
+    Ok(match r#type {
+        syn::Type::Path(path) => {
+            if let Some(identifier) = path.path.get_ident() {
+                match identifier.to_string().as_str() {
+                    "i64" | "u64" => IntegerType::new(&context, 64).into(),
+                    "isize" | "usize" => Type::index(&context),
+                    _ => todo!(),
+                }
+            } else {
+                return Err(Error::NotSupported("custom type"));
+            }
+        }
+        _ => todo!(),
+    })
 }
 
 fn compile_block<'c>(
