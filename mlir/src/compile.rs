@@ -85,6 +85,7 @@ fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>
 
 fn compile_primitive_type<'c>(context: &'c Context, name: &str) -> Type<'c> {
     match name {
+        "bool" => IntegerType::new(context, 1).into(),
         "f32" => Type::float32(context),
         "f64" => Type::float64(context),
         "isize" | "usize" => Type::index(context),
@@ -490,6 +491,24 @@ mod tests {
         let module = Module::new(location);
 
         compile(&module, &math::or_instruction()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn bool() {
+        #[allow(dead_code)]
+        #[autophagy::instruction]
+        fn foo() -> bool {
+            true
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_instruction()).unwrap();
 
         assert!(module.as_operation().verify());
     }
