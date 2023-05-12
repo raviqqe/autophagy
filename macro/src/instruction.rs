@@ -11,21 +11,6 @@ pub fn generate(
     attributes: &AttributeList,
     function: &ItemFn,
 ) -> Result<TokenStream, Box<dyn Error>> {
-    if function
-        .sig
-        .inputs
-        .iter()
-        .any(|input| matches!(input, FnArg::Receiver(_)))
-    {
-        return Err("receiver not supported".into());
-    } else if function.sig.abi.is_some() {
-        return Err("custom function ABI not supported".into());
-    } else if !function.sig.generics.params.is_empty() {
-        return Err("generic function not supported".into());
-    } else if function.sig.asyncness.is_some() {
-        return Err("async function not supported".into());
-    }
-
     let crate_path = parse_crate_path(attributes)?;
     let ident = &function.sig.ident;
     let ident_string = ident
