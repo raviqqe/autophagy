@@ -3,7 +3,7 @@ use autophagy::Instruction;
 use melior::{
     dialect::{arith, func, scf},
     ir::{
-        attribute::{IntegerAttribute, StringAttribute, TypeAttribute},
+        attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
         r#type::{FunctionType, IntegerType},
         Block, Location, Module, OperationRef, Region, Type, Value,
     },
@@ -326,7 +326,19 @@ fn compile_expression_literal<'a>(
             .into(),
             location,
         ),
-        syn::Lit::Float(_) => todo!(),
+        syn::Lit::Float(float) => arith::constant(
+            context,
+            FloatAttribute::new(
+                context,
+                float.base10_parse::<f64>()?,
+                match float.suffix() {
+                    "" => Type::index(context),
+                    name => compile_primitive_type(context, name),
+                },
+            )
+            .into(),
+            location,
+        ),
         syn::Lit::Str(_) => todo!(),
         syn::Lit::ByteStr(_) => todo!(),
         syn::Lit::Byte(_) => todo!(),
