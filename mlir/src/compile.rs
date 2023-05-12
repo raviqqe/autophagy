@@ -85,6 +85,8 @@ fn compile_type<'c>(context: &'c Context, r#type: &syn::Type) -> Result<Type<'c>
 
 fn compile_primitive_type<'c>(context: &'c Context, name: &str) -> Type<'c> {
     match name {
+        "f32" => Type::float32(context).into(),
+        "f64" => Type::float64(context).into(),
         "isize" | "usize" => Type::index(context),
         "i8" | "u8" => IntegerType::new(context, 8).into(),
         "i16" | "u16" => IntegerType::new(context, 16).into(),
