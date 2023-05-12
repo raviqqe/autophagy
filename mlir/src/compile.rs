@@ -254,12 +254,7 @@ fn compile_expression<'a>(
         }
         syn::Expr::While(r#while) => builder
             .append_operation(scf::r#while(
-                &[compile_expression(
-                    context,
-                    builder,
-                    &r#while.cond,
-                    variables,
-                )?],
+                &[],
                 &[],
                 {
                     let block = Block::new(&[]);
