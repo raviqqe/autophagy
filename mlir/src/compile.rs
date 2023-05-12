@@ -137,7 +137,7 @@ fn compile_statements<'a>(
     for (index, statement) in statements.iter().enumerate() {
         match statement {
             syn::Stmt::Local(local) => compile_local_binding(context, builder, local, variables)?,
-            syn::Stmt::Item(_) => todo!(),
+            syn::Stmt::Item(_) => return Err(Error::NotSupported("local item definition")),
             syn::Stmt::Expr(expression, semicolon) => {
                 let value = compile_expression(context, builder, expression, variables)?;
 
