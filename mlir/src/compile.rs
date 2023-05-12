@@ -5,7 +5,7 @@ use melior::{
     ir::{
         attribute::{IntegerAttribute, StringAttribute, TypeAttribute},
         r#type::{FunctionType, IntegerType},
-        Block, Location, Module, OperationRef, Region,
+        Block, Location, Module, OperationRef, Region, Type,
     },
     Context,
 };
@@ -100,7 +100,14 @@ fn compile_expression_literal<'a>(
             context,
             IntegerAttribute::new(
                 integer.base10_parse::<i64>()? as i64,
-                IntegerType::new(context, 64).into(),
+                match integer.suffix() {
+                    "" => Type::index(&context),
+                    "i8" | "u8" => IntegerType::new(context, 8).into(),
+                    "i16" | "u16" => IntegerType::new(context, 16).into(),
+                    "i32" | "u32" => IntegerType::new(context, 32).into(),
+                    "i64" | "u64" => IntegerType::new(context, 64).into(),
+                    _ => todo!(),
+                },
             )
             .into(),
             location,
