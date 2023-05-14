@@ -1,6 +1,6 @@
 # Autophagy
 
-The interpreter library.
+Isomorphic Rust.
 
 ## License
 
