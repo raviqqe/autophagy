@@ -7,4 +7,4 @@ edition = "2021"
 autophagy-macro = { version = "0.1", path = "../macro" }
 derivative = "2.2.0"
 quote = "1.0.27"
-syn = "2.0.15"
+syn = "2.0.16"
