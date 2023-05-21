@@ -3,11 +3,11 @@ use autophagy::Fn;
 use inkwell::execution_engine::ExecutionEngine;
 
 pub trait Engine {
-    fn add_instruction(&self, instruction: &Fn) -> Result<(), LlvmError>;
+    fn add_fn(&self, r#fn: &Fn) -> Result<(), LlvmError>;
 }
 
 impl<'c> Engine for ExecutionEngine<'c> {
-    fn add_instruction(&self, instruction: &Fn) -> Result<(), LlvmError> {
-        compile(self, instruction)
+    fn add_fn(&self, r#fn: &Fn) -> Result<(), LlvmError> {
+        compile(self, r#fn)
     }
 }

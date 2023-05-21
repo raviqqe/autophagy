@@ -6,14 +6,14 @@ use std::{
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum LlvmError {
-    AddInstruction(String),
+    AddFn(String),
 }
 
 impl Display for LlvmError {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match self {
-            Self::AddInstruction(name) => {
-                write!(formatter, "failed to add instruction: {}", name)
+            Self::AddFn(name) => {
+                write!(formatter, "failed to add a function: {}", name)
             }
         }
     }
