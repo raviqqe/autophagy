@@ -64,13 +64,12 @@ mod tests {
             .add_pass(pass::conversion::create_arith_to_llvm());
 
         assert_eq!(pass_manager.run(&mut module), Ok(()));
+        assert!(module.as_operation().verify());
 
         let engine = ExecutionEngine::new(&module, 2, &[], false);
 
         let mut argument = 42;
         let mut result = -1;
-
-        assert!(module.as_operation().verify());
 
         assert_eq!(
             unsafe {
