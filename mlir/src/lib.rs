@@ -24,19 +24,27 @@ mod tests {
         context.load_all_available_dialects();
         register_all_llvm_translations(&context);
 
+        context.attach_diagnostic_handler(|diagnostic| {
+            eprintln!("{}", diagnostic);
+            true
+        });
+
         context
     }
 
     #[autophagy::quote]
-    fn factorial(mut x: i64) -> i64 {
-        let mut y = 42;
+    fn factorial(mut x: i32) -> i32 {
+        // TODO
+        // let mut y = 42;
 
-        while x != 0 {
-            y = y * x;
-            x = x - 1;
-        }
+        // while x != 0 {
+        //     y = y * x;
+        //     x = x - 1;
+        // }
 
-        y
+        // y
+
+        x * 2i32
     }
 
     #[test]
@@ -47,6 +55,8 @@ mod tests {
         let mut module = Module::new(location);
 
         compile(&module, &factorial_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
 
         let pass_manager = PassManager::new(&context);
         pass_manager.add_pass(pass::conversion::create_func_to_llvm());
@@ -62,10 +72,12 @@ mod tests {
         let mut argument = 42;
         let mut result = -1;
 
+        assert!(module.as_operation().verify());
+
         assert_eq!(
             unsafe {
                 engine.invoke_packed(
-                    "add",
+                    "factorial",
                     &mut [
                         &mut argument as *mut _ as *mut _,
                         &mut result as *mut _ as *mut _,

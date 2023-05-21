@@ -5,7 +5,7 @@ use melior::{
     ir::{
         attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
         r#type::{FunctionType, IntegerType},
-        Block, Location, Module, OperationRef, Region, Type, Value,
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
     },
     Context,
 };
@@ -64,6 +64,10 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
             region.append_block(block);
             region
         },
+        &[(
+            Identifier::new(context, "llvm.emit_c_interface"),
+            Attribute::unit(&context),
+        )],
         location,
     ));
 
