@@ -33,6 +33,7 @@ mod tests {
         context
     }
 
+    #[allow(dead_code)]
     #[autophagy::quote]
     fn factorial(mut x: i32) -> i32 {
         let mut y = 1i32;
