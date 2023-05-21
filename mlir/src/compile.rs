@@ -1,11 +1,12 @@
 use crate::Error;
 use autophagy::Fn;
 use melior::{
-    dialect::{arith, func, scf},
+    dialect::{arith, func, memref, scf},
     ir::{
         attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
-        r#type::{FunctionType, IntegerType},
-        Block, Location, Module, OperationRef, Region, Type, Value,
+        r#type::{FunctionType, IntegerType, MemRefType},
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
+        ValueLike,
     },
     Context,
 };
@@ -42,20 +43,35 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
             );
             let mut variables = TrainMap::new();
 
-            for (index, name) in function
-                .sig
-                .inputs
-                .iter()
-                .map(|argument| match argument {
-                    syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
-                        syn::Pat::Ident(identifier) => Ok(identifier.ident.to_string()),
-                        _ => Err(Error::NotSupported("non-identifier pattern")),
-                    },
-                    syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
-                })
-                .enumerate()
-            {
-                variables.insert(name?, block.argument(index)?.into());
+            for result in function.sig.inputs.iter().map(|argument| match argument {
+                syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
+                    syn::Pat::Ident(identifier) => Ok((identifier.ident.to_string(), &typed.ty)),
+                    _ => Err(Error::NotSupported("non-identifier pattern")),
+                },
+                syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
+            }) {
+                let (name, r#type) = result?;
+
+                let ptr = block
+                    .append_operation(memref::alloca(
+                        context,
+                        MemRefType::new(compile_type(context, r#type)?, &[], None, None),
+                        &[],
+                        &[],
+                        None,
+                        location,
+                    ))
+                    .result(0)?
+                    .into();
+
+                block.append_operation(memref::store(
+                    block.argument(0)?.into(),
+                    ptr,
+                    &[],
+                    location,
+                ));
+
+                variables.insert(name, ptr);
             }
 
             compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
@@ -64,7 +80,10 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
             region.append_block(block);
             region
         },
-        &[],
+        &[(
+            Identifier::new(context, "llvm.emit_c_interface"),
+            Attribute::unit(context),
+        )],
         location,
     ));
 
@@ -174,13 +193,26 @@ fn compile_local_binding<'a>(
         },
         variables,
     )?;
+    let ptr = builder
+        .append_operation(memref::alloca(
+            context,
+            MemRefType::new(value.r#type(), &[], None, None),
+            &[],
+            &[],
+            None,
+            Location::unknown(context),
+        ))
+        .result(0)?
+        .into();
+
+    builder.append_operation(memref::store(value, ptr, &[], Location::unknown(context)));
 
     variables.insert(
         match &local.pat {
             syn::Pat::Ident(identifier) => identifier.ident.to_string(),
             _ => return Err(Error::NotSupported("non-identifier pattern")),
         },
-        value,
+        ptr,
     );
 
     Ok(())
@@ -195,6 +227,18 @@ fn compile_expression<'a>(
     let location = Location::unknown(context);
 
     Ok(match expression {
+        syn::Expr::Assign(assign) => {
+            let value = compile_expression(context, builder, &assign.right, variables)?;
+
+            builder.append_operation(memref::store(
+                value,
+                compile_ptr(&assign.left, variables)?,
+                &[],
+                location,
+            ));
+
+            value
+        }
         syn::Expr::Binary(operation) => {
             compile_binary_operation(context, builder, operation, variables)?
                 .result(0)?
@@ -242,7 +286,7 @@ fn compile_expression<'a>(
         syn::Expr::Lit(literal) => compile_expression_literal(context, builder, literal)?
             .result(0)?
             .into(),
-        syn::Expr::Path(path) => compile_path(path, variables)?,
+        syn::Expr::Path(path) => compile_path(context, builder, path, variables)?,
         syn::Expr::Unary(operation) => {
             compile_unary_operation(context, builder, operation, variables)?
                 .result(0)?
@@ -257,7 +301,7 @@ fn compile_expression<'a>(
                     let mut variables = variables.fork();
 
                     block.append_operation(scf::condition(
-                        compile_expression(context, builder, &r#while.cond, &mut variables)?,
+                        compile_expression(context, &block, &r#while.cond, &mut variables)?,
                         &[],
                         location,
                     ));
@@ -272,7 +316,17 @@ fn compile_expression<'a>(
 
             compile_unit(context, builder)?
         }
-        _ => todo!(),
+        _ => todo!("{:?}", expression),
+    })
+}
+
+fn compile_ptr<'a>(
+    expression: &syn::Expr,
+    variables: &mut TrainMap<String, Value<'a>>,
+) -> Result<Value<'a>, Error> {
+    Ok(match expression {
+        syn::Expr::Path(path) => compile_path_ptr(path, variables)?,
+        _ => todo!("{:?}", expression),
     })
 }
 
@@ -295,8 +349,7 @@ fn compile_unary_operation<'a>(
                     IntegerAttribute::new(0, Type::index(context)).into(),
                     location,
                 ))
-                .result(0)
-                .unwrap()
+                .result(0)?
                 .into(),
             value,
             location,
@@ -308,8 +361,7 @@ fn compile_unary_operation<'a>(
                     IntegerAttribute::new(0, Type::index(context)).into(),
                     location,
                 ))
-                .result(0)
-                .unwrap()
+                .result(0)?
                 .into(),
             value,
             location,
@@ -411,18 +463,34 @@ fn compile_expression_literal<'a>(
 }
 
 fn compile_path<'a>(
+    context: &Context,
+    builder: &'a Block,
     path: &syn::ExprPath,
     variables: &TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
-    Ok(if let Some(identifier) = path.path.get_ident() {
+    Ok(builder
+        .append_operation(memref::load(
+            compile_path_ptr(path, variables)?,
+            &[],
+            Location::unknown(context),
+        ))
+        .result(0)?
+        .into())
+}
+
+fn compile_path_ptr<'a>(
+    path: &syn::ExprPath,
+    variables: &TrainMap<String, Value<'a>>,
+) -> Result<Value<'a>, Error> {
+    if let Some(identifier) = path.path.get_ident() {
         let name = identifier.to_string();
 
-        *variables
+        Ok(*variables
             .get(&name)
-            .ok_or(Error::VariableNotDefined(name))?
+            .ok_or(Error::VariableNotDefined(name))?)
     } else {
-        return Err(Error::NotSupported("non-identifier path"));
-    })
+        Err(Error::NotSupported("non-identifier path"))
+    }
 }
 
 // TODO Use a zero-sized type. (LLVM struct?)
@@ -650,10 +718,12 @@ mod tests {
 
     #[test]
     fn r#let() {
-        #[allow(dead_code)]
+        #[allow(dead_code, clippy::let_and_return)]
         #[autophagy::quote]
         fn foo() -> usize {
-            42usize
+            let x = 42usize;
+
+            x
         }
 
         let context = create_context();

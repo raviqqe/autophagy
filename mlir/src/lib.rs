@@ -6,36 +6,55 @@ pub use error::Error;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use melior::{
         dialect::DialectRegistry,
-        ir::Module,
+        ir::{Location, Module},
         pass::{self, PassManager},
         utility::{register_all_dialects, register_all_llvm_translations},
         Context, ExecutionEngine,
     };
 
-    #[test]
-    fn run() {
+    fn create_context() -> Context {
         let registry = DialectRegistry::new();
         register_all_dialects(&registry);
 
         let context = Context::new();
         context.append_dialect_registry(&registry);
+        context.load_all_available_dialects();
         register_all_llvm_translations(&context);
 
-        // TODO Add a function by `add_fn`.
-        let mut module = Module::parse(
-            &context,
-            r#"
-            module {
-                func.func @add(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
-                    %res = arith.addi %arg0, %arg0 : i32
-                    return %res : i32
-                }
-            }
-            "#,
-        )
-        .unwrap();
+        context.attach_diagnostic_handler(|diagnostic| {
+            eprintln!("{}", diagnostic);
+            true
+        });
+
+        context
+    }
+
+    #[allow(dead_code, clippy::assign_op_pattern)]
+    #[autophagy::quote]
+    fn factorial(mut x: i32) -> i32 {
+        let mut y = 1i32;
+
+        while x > 0i32 {
+            y = y * x;
+            x = x - 1i32;
+        }
+
+        y
+    }
+
+    #[test]
+    fn compile_factorial() {
+        let context = create_context();
+        let location = Location::unknown(&context);
+
+        let mut module = Module::new(location);
+
+        compile(&module, &factorial_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
 
         let pass_manager = PassManager::new(&context);
         pass_manager.add_pass(pass::conversion::create_func_to_llvm());
@@ -43,18 +62,25 @@ mod tests {
         pass_manager
             .nested_under("func.func")
             .add_pass(pass::conversion::create_arith_to_llvm());
+        pass_manager
+            .nested_under("func.func")
+            .add_pass(pass::conversion::create_index_to_llvm_pass());
+        pass_manager.add_pass(pass::conversion::create_scf_to_control_flow());
+        pass_manager.add_pass(pass::conversion::create_control_flow_to_llvm());
+        pass_manager.add_pass(pass::conversion::create_mem_ref_to_llvm());
 
         assert_eq!(pass_manager.run(&mut module), Ok(()));
+        assert!(module.as_operation().verify());
 
         let engine = ExecutionEngine::new(&module, 2, &[], false);
 
-        let mut argument = 42;
+        let mut argument = 5;
         let mut result = -1;
 
         assert_eq!(
             unsafe {
                 engine.invoke_packed(
-                    "add",
+                    "factorial",
                     &mut [
                         &mut argument as *mut _ as *mut _,
                         &mut result as *mut _ as *mut _,
@@ -64,7 +90,7 @@ mod tests {
             Ok(())
         );
 
-        assert_eq!(argument, 42);
-        assert_eq!(result, 84);
+        assert_eq!(argument, 5);
+        assert_eq!(result, 120);
     }
 }
