@@ -43,20 +43,35 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
             );
             let mut variables = TrainMap::new();
 
-            for (index, name) in function
-                .sig
-                .inputs
-                .iter()
-                .map(|argument| match argument {
-                    syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
-                        syn::Pat::Ident(identifier) => Ok(identifier.ident.to_string()),
-                        _ => Err(Error::NotSupported("non-identifier pattern")),
-                    },
-                    syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
-                })
-                .enumerate()
-            {
-                variables.insert(name?, Variable::new(block.argument(index)?.into(), false));
+            for result in function.sig.inputs.iter().map(|argument| match argument {
+                syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
+                    syn::Pat::Ident(identifier) => Ok((identifier.ident.to_string(), &typed.ty)),
+                    _ => Err(Error::NotSupported("non-identifier pattern")),
+                },
+                syn::FnArg::Receiver(_) => Err(Error::NotSupported("self receiver")),
+            }) {
+                let (name, r#type) = result?;
+
+                let ptr = block
+                    .append_operation(memref::alloca(
+                        context,
+                        MemRefType::new(compile_type(context, &r#type)?, &[], None, None),
+                        &[],
+                        &[],
+                        None,
+                        location,
+                    ))
+                    .result(0)?
+                    .into();
+
+                block.append_operation(memref::store(
+                    block.argument(0)?.into(),
+                    ptr,
+                    &[],
+                    location,
+                ));
+
+                variables.insert(name, Variable::new(ptr, false));
             }
 
             compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
@@ -215,7 +230,7 @@ fn compile_expression<'a>(
 
             builder.append_operation(memref::store(
                 value,
-                compile_ptr(context, &assign.left, variables)?,
+                compile_ptr(&assign.left, variables)?,
                 &[],
                 location,
             ));
@@ -304,7 +319,6 @@ fn compile_expression<'a>(
 }
 
 fn compile_ptr<'a>(
-    context: &Context,
     expression: &syn::Expr,
     variables: &mut TrainMap<String, Variable<'a>>,
 ) -> Result<Value<'a>, Error> {
@@ -454,18 +468,14 @@ fn compile_path<'a>(
 ) -> Result<Value<'a>, Error> {
     let variable = compile_path_variable(path, variables)?;
 
-    Ok(if variable.local() {
-        builder
-            .append_operation(memref::load(
-                variable.value(),
-                &[],
-                Location::unknown(context),
-            ))
-            .result(0)?
-            .into()
-    } else {
-        variable.value()
-    })
+    Ok(builder
+        .append_operation(memref::load(
+            variable.value(),
+            &[],
+            Location::unknown(context),
+        ))
+        .result(0)?
+        .into())
 }
 
 fn compile_path_ptr<'a>(
