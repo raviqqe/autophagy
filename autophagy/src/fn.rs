@@ -3,13 +3,13 @@ use syn::ItemFn;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct Instruction {
+pub struct Fn {
     name: &'static str,
     #[derivative(Debug = "ignore")]
     r#fn: ItemFn,
 }
 
-impl Instruction {
+impl Fn {
     pub const fn new(name: &'static str, r#fn: ItemFn) -> Self {
         Self { name, r#fn }
     }
@@ -18,7 +18,7 @@ impl Instruction {
         self.name
     }
 
-    pub fn r#fn(&self) -> &ItemFn {
+    pub fn ast(&self) -> &ItemFn {
         &self.r#fn
     }
 }

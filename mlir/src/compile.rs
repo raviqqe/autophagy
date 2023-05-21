@@ -1,5 +1,5 @@
 use crate::Error;
-use autophagy::Instruction;
+use autophagy::Fn;
 use melior::{
     dialect::{arith, func, scf},
     ir::{
@@ -11,8 +11,8 @@ use melior::{
 };
 use train_map::TrainMap;
 
-pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> {
-    let function = instruction.r#fn();
+pub fn compile(module: &Module, instruction: &Fn) -> Result<(), Error> {
+    let function = instruction.ast();
     let context = &module.context();
     let location = Location::unknown(context);
     let argument_types = function
