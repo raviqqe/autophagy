@@ -6,7 +6,7 @@ use std::{
 
 #[derive(Debug)]
 pub enum Error {
-    AddInstruction(String),
+    AddFn(String),
     Melior(melior::Error),
     Syn(syn::Error),
     VariableNotDefined(String),
@@ -16,8 +16,8 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match self {
-            Self::AddInstruction(name) => {
-                write!(formatter, "failed to add instruction: {}", name)
+            Self::AddFn(name) => {
+                write!(formatter, "failed to add a function: {}", name)
             }
             Self::Melior(error) => write!(formatter, "{}", error),
             Self::NotSupported(name) => {

@@ -1,5 +1,5 @@
 use crate::Error;
-use autophagy::Instruction;
+use autophagy::Fn;
 use melior::{
     dialect::{arith, func, scf},
     ir::{
@@ -11,8 +11,8 @@ use melior::{
 };
 use train_map::TrainMap;
 
-pub fn compile(module: &Module, instruction: &Instruction) -> Result<(), Error> {
-    let function = instruction.r#fn();
+pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
+    let function = r#fn.ast();
     let context = &module.context();
     let location = Location::unknown(context);
     let argument_types = function
@@ -470,7 +470,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::add_instruction()).unwrap();
+        compile(&module, &math::add_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -482,7 +482,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::sub_instruction()).unwrap();
+        compile(&module, &math::sub_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -494,7 +494,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::mul_instruction()).unwrap();
+        compile(&module, &math::mul_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -506,7 +506,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::div_instruction()).unwrap();
+        compile(&module, &math::div_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -518,7 +518,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::rem_instruction()).unwrap();
+        compile(&module, &math::rem_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -530,7 +530,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::neg_instruction()).unwrap();
+        compile(&module, &math::neg_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -542,7 +542,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::not_instruction()).unwrap();
+        compile(&module, &math::not_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -554,7 +554,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::and_instruction()).unwrap();
+        compile(&module, &math::and_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -566,7 +566,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::or_instruction()).unwrap();
+        compile(&module, &math::or_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -574,7 +574,7 @@ mod tests {
     #[test]
     fn bool() {
         #[allow(dead_code)]
-        #[autophagy::instruction]
+        #[autophagy::quote]
         fn foo() -> bool {
             true
         }
@@ -584,7 +584,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_instruction()).unwrap();
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -592,7 +592,7 @@ mod tests {
     #[test]
     fn float32() {
         #[allow(dead_code)]
-        #[autophagy::instruction]
+        #[autophagy::quote]
         fn foo() -> f32 {
             42f32
         }
@@ -602,7 +602,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_instruction()).unwrap();
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -610,7 +610,7 @@ mod tests {
     #[test]
     fn float64() {
         #[allow(dead_code)]
-        #[autophagy::instruction]
+        #[autophagy::quote]
         fn foo() -> f64 {
             42f64
         }
@@ -620,7 +620,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_instruction()).unwrap();
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -628,7 +628,7 @@ mod tests {
     #[test]
     fn r#if() {
         #[allow(dead_code)]
-        #[autophagy::instruction]
+        #[autophagy::quote]
         fn foo() -> usize {
             if true {
                 42usize
@@ -642,7 +642,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_instruction()).unwrap();
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -650,7 +650,7 @@ mod tests {
     #[test]
     fn r#let() {
         #[allow(dead_code)]
-        #[autophagy::instruction]
+        #[autophagy::quote]
         fn foo() -> usize {
             42usize
         }
@@ -660,7 +660,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_instruction()).unwrap();
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn r#while() {
         #[allow(dead_code)]
-        #[autophagy::instruction]
+        #[autophagy::quote]
         fn foo() -> usize {
             #[allow(while_true)]
             while true {}
@@ -681,7 +681,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_instruction()).unwrap();
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }

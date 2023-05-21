@@ -1,6 +1,5 @@
 mod compile;
-mod engine;
 mod error;
 
-pub use engine::Engine;
+pub use compile::compile;
 pub use error::LlvmError;
