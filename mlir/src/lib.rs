@@ -34,12 +34,12 @@ mod tests {
     }
 
     #[autophagy::quote]
-    fn factorial(mut x: usize) -> usize {
-        let mut y = 42;
+    fn factorial(mut x: i32) -> i32 {
+        let mut y = 42i32;
 
-        while x != 0 {
+        while x != 0i32 {
             y = y * x;
-            x = x - 1;
+            x = x - 1i32;
         }
 
         y
