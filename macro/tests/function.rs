@@ -1,9 +1,9 @@
-use autophagy_macro::instruction;
+use autophagy_macro::quote;
 
-#[instruction]
+#[quote]
 pub fn foo() {}
 
-#[instruction]
+#[quote]
 pub fn bar(x: usize) -> usize {
     x
 }

@@ -19,15 +19,15 @@ pub fn generate(
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| ident.to_string());
     let visibility = &function.vis;
-    let instruction_name = Ident::new(&(ident_string + "_instruction"), function.sig.ident.span());
+    let quote_name = Ident::new(&(ident_string + "_fn"), function.sig.ident.span());
     let name_string = Expr::Lit(ExprLit {
         attrs: Vec::new(),
         lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
     });
 
     Ok(quote! {
-        #visibility fn #instruction_name() -> #crate_path::Instruction {
-            #crate_path::Instruction::new(#name_string, syn::parse2(quote::quote!(#function)).unwrap())
+        #visibility fn #quote_name() -> #crate_path::Fn {
+            #crate_path::Fn::new(#name_string, syn::parse2(quote::quote!(#function)).unwrap())
         }
 
         #function
