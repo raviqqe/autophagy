@@ -64,6 +64,7 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
             region.append_block(block);
             region
         },
+        &[],
         location,
     ));
 
