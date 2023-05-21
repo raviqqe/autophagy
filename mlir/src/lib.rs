@@ -6,16 +6,16 @@ pub use error::Error;
 
 #[cfg(test)]
 mod tests {
+    use autophagy::quote;
     use melior::{
         dialect::DialectRegistry,
-        ir::Module,
+        ir::{Location, Module},
         pass::{self, PassManager},
         utility::{register_all_dialects, register_all_llvm_translations},
         Context, ExecutionEngine,
     };
 
-    #[test]
-    fn run() {
+    fn create_context() -> Context {
         let registry = DialectRegistry::new();
         register_all_dialects(&registry);
 
@@ -23,19 +23,28 @@ mod tests {
         context.append_dialect_registry(&registry);
         register_all_llvm_translations(&context);
 
-        // TODO Add a function by `add_fn`.
-        let mut module = Module::parse(
-            &context,
-            r#"
-            module {
-                func.func @add(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
-                    %res = arith.addi %arg0, %arg0 : i32
-                    return %res : i32
-                }
-            }
-            "#,
-        )
-        .unwrap();
+        context
+    }
+
+    #[quote]
+    fn factorial(x: i64) -> i64 {
+        let mut y = 42;
+
+        while x != 0 {
+            y = y * x;
+        }
+
+        x
+    }
+
+    #[test]
+    fn compile_factorial() {
+        let context = create_context();
+        let location = Location::unknown(&context);
+
+        let mut module = Module::new(location);
+
+        compile();
 
         let pass_manager = PassManager::new(&context);
         pass_manager.add_pass(pass::conversion::create_func_to_llvm());
