@@ -1,4 +1,4 @@
-use crate::{variable::Variable, Error};
+use crate::Error;
 use autophagy::Fn;
 use melior::{
     dialect::{arith, func, memref, scf},
@@ -71,7 +71,7 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
                     location,
                 ));
 
-                variables.insert(name, Variable::new(ptr, false));
+                variables.insert(name, ptr);
             }
 
             compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
@@ -121,7 +121,7 @@ fn compile_block(
     context: &Context,
     block: &syn::Block,
     function_scope: bool,
-    variables: &mut TrainMap<String, Variable>,
+    variables: &mut TrainMap<String, Value>,
 ) -> Result<Region, Error> {
     let builder = Block::new(&[]);
     let mut variables = variables.fork();
@@ -144,7 +144,7 @@ fn compile_statements<'a>(
     builder: &'a Block,
     statements: &[syn::Stmt],
     function_scope: bool,
-    variables: &mut TrainMap<String, Variable<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     let location = Location::unknown(context);
     let terminator = if function_scope {
@@ -181,7 +181,7 @@ fn compile_local_binding<'a>(
     context: &Context,
     builder: &'a Block,
     local: &syn::Local,
-    variables: &mut TrainMap<String, Variable<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<(), Error> {
     let value = compile_expression(
         context,
@@ -212,7 +212,7 @@ fn compile_local_binding<'a>(
             syn::Pat::Ident(identifier) => identifier.ident.to_string(),
             _ => return Err(Error::NotSupported("non-identifier pattern")),
         },
-        Variable::new(ptr, true),
+        ptr,
     );
 
     Ok(())
@@ -222,7 +222,7 @@ fn compile_expression<'a>(
     context: &Context,
     builder: &'a Block,
     expression: &syn::Expr,
-    variables: &mut TrainMap<String, Variable<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
     let location = Location::unknown(context);
 
@@ -322,7 +322,7 @@ fn compile_expression<'a>(
 
 fn compile_ptr<'a>(
     expression: &syn::Expr,
-    variables: &mut TrainMap<String, Variable<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
     Ok(match expression {
         syn::Expr::Path(path) => compile_path_ptr(path, variables)?,
@@ -334,7 +334,7 @@ fn compile_unary_operation<'a>(
     context: &Context,
     builder: &'a Block,
     operation: &syn::ExprUnary,
-    variables: &mut TrainMap<String, Variable<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<OperationRef<'a>, Error> {
     let location = Location::unknown(context);
     let value = compile_expression(context, builder, &operation.expr, variables)?;
@@ -375,7 +375,7 @@ fn compile_binary_operation<'a>(
     context: &Context,
     builder: &'a Block,
     operation: &syn::ExprBinary,
-    variables: &mut TrainMap<String, Variable<'a>>,
+    variables: &mut TrainMap<String, Value<'a>>,
 ) -> Result<OperationRef<'a>, Error> {
     let location = Location::unknown(context);
     let left = compile_expression(context, builder, &operation.left, variables)?;
@@ -466,13 +466,11 @@ fn compile_path<'a>(
     context: &Context,
     builder: &'a Block,
     path: &syn::ExprPath,
-    variables: &TrainMap<String, Variable<'a>>,
+    variables: &TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
-    let variable = compile_path_variable(path, variables)?;
-
     Ok(builder
         .append_operation(memref::load(
-            variable.value(),
+            compile_path_ptr(path, variables)?,
             &[],
             Location::unknown(context),
         ))
@@ -482,24 +480,17 @@ fn compile_path<'a>(
 
 fn compile_path_ptr<'a>(
     path: &syn::ExprPath,
-    variables: &TrainMap<String, Variable<'a>>,
+    variables: &TrainMap<String, Value<'a>>,
 ) -> Result<Value<'a>, Error> {
-    Ok(compile_path_variable(path, variables)?.value())
-}
-
-fn compile_path_variable<'a, 'b>(
-    path: &syn::ExprPath,
-    variables: &'b TrainMap<String, Variable<'a>>,
-) -> Result<&'b Variable<'a>, Error> {
-    Ok(if let Some(identifier) = path.path.get_ident() {
+    if let Some(identifier) = path.path.get_ident() {
         let name = identifier.to_string();
 
-        variables
+        Ok(*variables
             .get(&name)
-            .ok_or(Error::VariableNotDefined(name))?
+            .ok_or(Error::VariableNotDefined(name))?)
     } else {
-        return Err(Error::NotSupported("non-identifier path"));
-    })
+        Err(Error::NotSupported("non-identifier path"))
+    }
 }
 
 // TODO Use a zero-sized type. (LLVM struct?)
