@@ -32,7 +32,7 @@ mod tests {
         context
     }
 
-    #[allow(dead_code, clippy::assign_op_pattern)]
+    #[allow(clippy::assign_op_pattern)]
     #[autophagy::quote]
     fn factorial(mut x: i32) -> i32 {
         let mut y = 1i32;
@@ -91,6 +91,6 @@ mod tests {
         );
 
         assert_eq!(argument, 5);
-        assert_eq!(result, 120);
+        assert_eq!(result, factorial(argument));
     }
 }
