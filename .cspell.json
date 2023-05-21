@@ -1,1 +1,3 @@
-{ "words": ["addi", "asyncness", "melior", "mlir"] }
+{
+  "words": ["addi", "asyncness", "melior", "memref", "mlir"]
+}
