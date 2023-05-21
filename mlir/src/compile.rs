@@ -210,7 +210,18 @@ fn compile_expression<'a>(
     let location = Location::unknown(context);
 
     Ok(match expression {
-        syn::Expr::Assign(assign) => todo!(),
+        syn::Expr::Assign(assign) => {
+            let value = compile_expression(context, builder, &assign.right, variables)?;
+
+            builder.append_operation(memref::store(
+                value,
+                compile_ptr(context, &assign.left, variables)?,
+                &[],
+                location,
+            ));
+
+            value
+        }
         syn::Expr::Binary(operation) => {
             compile_binary_operation(context, builder, operation, variables)?
                 .result(0)?
@@ -288,6 +299,17 @@ fn compile_expression<'a>(
 
             compile_unit(context, builder)?
         }
+        _ => todo!("{:?}", expression),
+    })
+}
+
+fn compile_ptr<'a>(
+    context: &Context,
+    expression: &syn::Expr,
+    variables: &mut TrainMap<String, Variable<'a>>,
+) -> Result<Value<'a>, Error> {
+    Ok(match expression {
+        syn::Expr::Path(path) => compile_path_ptr(path, variables)?,
         _ => todo!("{:?}", expression),
     })
 }
@@ -430,24 +452,39 @@ fn compile_path<'a>(
     path: &syn::ExprPath,
     variables: &TrainMap<String, Variable<'a>>,
 ) -> Result<Value<'a>, Error> {
+    let variable = compile_path_variable(path, variables)?;
+
+    Ok(if variable.local() {
+        builder
+            .append_operation(memref::load(
+                variable.value(),
+                &[],
+                Location::unknown(context),
+            ))
+            .result(0)?
+            .into()
+    } else {
+        variable.value()
+    })
+}
+
+fn compile_path_ptr<'a>(
+    path: &syn::ExprPath,
+    variables: &TrainMap<String, Variable<'a>>,
+) -> Result<Value<'a>, Error> {
+    Ok(compile_path_variable(path, variables)?.value())
+}
+
+fn compile_path_variable<'a, 'b>(
+    path: &syn::ExprPath,
+    variables: &'b TrainMap<String, Variable<'a>>,
+) -> Result<&'b Variable<'a>, Error> {
     Ok(if let Some(identifier) = path.path.get_ident() {
         let name = identifier.to_string();
-        let variable = variables
-            .get(&name)
-            .ok_or(Error::VariableNotDefined(name))?;
 
-        if variable.local() {
-            builder
-                .append_operation(memref::load(
-                    variable.value(),
-                    &[],
-                    Location::unknown(context),
-                ))
-                .result(0)?
-                .into()
-        } else {
-            variable.value()
-        }
+        variables
+            .get(&name)
+            .ok_or(Error::VariableNotDefined(name))?
     } else {
         return Err(Error::NotSupported("non-identifier path"));
     })
