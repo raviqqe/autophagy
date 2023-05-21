@@ -1,7 +1,7 @@
-use crate::Error;
+use crate::{variable::Variable, Error};
 use autophagy::Fn;
 use melior::{
-    dialect::{arith, func, scf},
+    dialect::{arith, func, memref, scf},
     ir::{
         attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
         r#type::{FunctionType, IntegerType},
@@ -55,7 +55,7 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
                 })
                 .enumerate()
             {
-                variables.insert(name?, block.argument(index)?.into());
+                variables.insert(name?, Variable::new(block.argument(index)?.into(), false));
             }
 
             compile_statements(context, &block, &function.block.stmts, true, &mut variables)?;
@@ -105,7 +105,7 @@ fn compile_block(
     context: &Context,
     block: &syn::Block,
     function_scope: bool,
-    variables: &mut TrainMap<String, Value>,
+    variables: &mut TrainMap<String, Variable>,
 ) -> Result<Region, Error> {
     let builder = Block::new(&[]);
     let mut variables = variables.fork();
@@ -128,7 +128,7 @@ fn compile_statements<'a>(
     builder: &'a Block,
     statements: &[syn::Stmt],
     function_scope: bool,
-    variables: &mut TrainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Variable<'a>>,
 ) -> Result<(), Error> {
     let location = Location::unknown(context);
     let terminator = if function_scope {
@@ -165,7 +165,7 @@ fn compile_local_binding<'a>(
     context: &Context,
     builder: &'a Block,
     local: &syn::Local,
-    variables: &mut TrainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Variable<'a>>,
 ) -> Result<(), Error> {
     let value = compile_expression(
         context,
@@ -183,7 +183,7 @@ fn compile_local_binding<'a>(
             syn::Pat::Ident(identifier) => identifier.ident.to_string(),
             _ => return Err(Error::NotSupported("non-identifier pattern")),
         },
-        value,
+        Variable::new(value, true),
     );
 
     Ok(())
@@ -193,7 +193,7 @@ fn compile_expression<'a>(
     context: &Context,
     builder: &'a Block,
     expression: &syn::Expr,
-    variables: &mut TrainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Variable<'a>>,
 ) -> Result<Value<'a>, Error> {
     let location = Location::unknown(context);
 
@@ -246,7 +246,7 @@ fn compile_expression<'a>(
         syn::Expr::Lit(literal) => compile_expression_literal(context, builder, literal)?
             .result(0)?
             .into(),
-        syn::Expr::Path(path) => compile_path(path, variables)?,
+        syn::Expr::Path(path) => compile_path(context, builder, path, variables)?,
         syn::Expr::Unary(operation) => {
             compile_unary_operation(context, builder, operation, variables)?
                 .result(0)?
@@ -284,7 +284,7 @@ fn compile_unary_operation<'a>(
     context: &Context,
     builder: &'a Block,
     operation: &syn::ExprUnary,
-    variables: &mut TrainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Variable<'a>>,
 ) -> Result<OperationRef<'a>, Error> {
     let location = Location::unknown(context);
     let value = compile_expression(context, builder, &operation.expr, variables)?;
@@ -327,7 +327,7 @@ fn compile_binary_operation<'a>(
     context: &Context,
     builder: &'a Block,
     operation: &syn::ExprBinary,
-    variables: &mut TrainMap<String, Value<'a>>,
+    variables: &mut TrainMap<String, Variable<'a>>,
 ) -> Result<OperationRef<'a>, Error> {
     let location = Location::unknown(context);
     let left = compile_expression(context, builder, &operation.left, variables)?;
@@ -415,15 +415,30 @@ fn compile_expression_literal<'a>(
 }
 
 fn compile_path<'a>(
+    context: &Context,
+    builder: &'a Block,
     path: &syn::ExprPath,
-    variables: &TrainMap<String, Value<'a>>,
+    variables: &TrainMap<String, Variable<'a>>,
 ) -> Result<Value<'a>, Error> {
     Ok(if let Some(identifier) = path.path.get_ident() {
         let name = identifier.to_string();
-
-        *variables
+        let variable = variables
             .get(&name)
-            .ok_or(Error::VariableNotDefined(name))?
+            .ok_or(Error::VariableNotDefined(name))?;
+
+        if variable.local() {
+            builder
+                .append_operation(memref::load(
+                    variable.value(),
+                    &[],
+                    Location::unknown(context),
+                ))
+                .result(0)
+                .unwrap()
+                .into()
+        } else {
+            variable.value()
+        }
     } else {
         return Err(Error::NotSupported("non-identifier path"));
     })
