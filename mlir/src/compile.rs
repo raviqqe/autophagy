@@ -177,6 +177,7 @@ fn compile_local_binding<'a>(
         },
         variables,
     )?;
+    let value = builder.append_operation(memref::alloca()).result(0)?.into();
 
     variables.insert(
         match &local.pat {
@@ -299,8 +300,7 @@ fn compile_unary_operation<'a>(
                     IntegerAttribute::new(0, Type::index(context)).into(),
                     location,
                 ))
-                .result(0)
-                .unwrap()
+                .result(0)?
                 .into(),
             value,
             location,
@@ -312,8 +312,7 @@ fn compile_unary_operation<'a>(
                     IntegerAttribute::new(0, Type::index(context)).into(),
                     location,
                 ))
-                .result(0)
-                .unwrap()
+                .result(0)?
                 .into(),
             value,
             location,
@@ -433,8 +432,7 @@ fn compile_path<'a>(
                     &[],
                     Location::unknown(context),
                 ))
-                .result(0)
-                .unwrap()
+                .result(0)?
                 .into()
         } else {
             variable.value()
