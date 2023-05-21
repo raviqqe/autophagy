@@ -301,7 +301,7 @@ fn compile_expression<'a>(
                     let mut variables = variables.fork();
 
                     block.append_operation(scf::condition(
-                        compile_expression(context, builder, &r#while.cond, &mut variables)?,
+                        compile_expression(context, &block, &r#while.cond, &mut variables)?,
                         &[],
                         location,
                     ));
