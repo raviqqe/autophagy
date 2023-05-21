@@ -4,8 +4,9 @@ use melior::{
     dialect::{arith, func, memref, scf},
     ir::{
         attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
-        r#type::{FunctionType, IntegerType},
+        r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
+        ValueLike,
     },
     Context,
 };
@@ -177,7 +178,17 @@ fn compile_local_binding<'a>(
         },
         variables,
     )?;
-    let value = builder.append_operation(memref::alloca()).result(0)?.into();
+    let value = builder
+        .append_operation(memref::alloca(
+            context,
+            MemRefType::new(value.r#type(), &[], None, None),
+            &[],
+            &[],
+            None,
+            Location::unknown(context),
+        ))
+        .result(0)?
+        .into();
 
     variables.insert(
         match &local.pat {
@@ -670,7 +681,9 @@ mod tests {
         #[allow(dead_code)]
         #[autophagy::quote]
         fn foo() -> usize {
-            42usize
+            let x = 42usize;
+
+            x
         }
 
         let context = create_context();
