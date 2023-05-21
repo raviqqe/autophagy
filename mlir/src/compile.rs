@@ -55,7 +55,7 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
                 let ptr = block
                     .append_operation(memref::alloca(
                         context,
-                        MemRefType::new(compile_type(context, &r#type)?, &[], None, None),
+                        MemRefType::new(compile_type(context, r#type)?, &[], None, None),
                         &[],
                         &[],
                         None,
@@ -82,7 +82,7 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
         },
         &[(
             Identifier::new(context, "llvm.emit_c_interface"),
-            Attribute::unit(&context),
+            Attribute::unit(context),
         )],
         location,
     ));
