@@ -1,5 +1,6 @@
 mod compile;
 mod error;
+mod variable;
 
 pub use compile::compile;
 pub use error::Error;
