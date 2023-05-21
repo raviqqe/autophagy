@@ -194,6 +194,7 @@ fn compile_expression<'a>(
     let location = Location::unknown(context);
 
     Ok(match expression {
+        syn::Expr::Assign(assign) => todo!(),
         syn::Expr::Binary(operation) => {
             compile_binary_operation(context, builder, operation, variables)?
                 .result(0)?
@@ -271,7 +272,7 @@ fn compile_expression<'a>(
 
             compile_unit(context, builder)?
         }
-        _ => todo!(),
+        _ => todo!("{:?}", expression),
     })
 }
 

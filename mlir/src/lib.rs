@@ -6,7 +6,7 @@ pub use error::Error;
 
 #[cfg(test)]
 mod tests {
-    use autophagy::quote;
+    use super::*;
     use melior::{
         dialect::DialectRegistry,
         ir::{Location, Module},
@@ -21,20 +21,22 @@ mod tests {
 
         let context = Context::new();
         context.append_dialect_registry(&registry);
+        context.load_all_available_dialects();
         register_all_llvm_translations(&context);
 
         context
     }
 
-    #[quote]
-    fn factorial(x: i64) -> i64 {
+    #[autophagy::quote]
+    fn factorial(mut x: i64) -> i64 {
         let mut y = 42;
 
         while x != 0 {
             y = y * x;
+            x = x - 1;
         }
 
-        x
+        y
     }
 
     #[test]
@@ -44,7 +46,7 @@ mod tests {
 
         let mut module = Module::new(location);
 
-        compile();
+        compile(&module, &factorial_fn()).unwrap();
 
         let pass_manager = PassManager::new(&context);
         pass_manager.add_pass(pass::conversion::create_func_to_llvm());
