@@ -35,7 +35,7 @@ mod tests {
 
     #[autophagy::quote]
     fn factorial(mut x: i32) -> i32 {
-        let mut y = 42i32;
+        let mut y = 1i32;
 
         while x > 0i32 {
             y = y * x;
@@ -74,7 +74,7 @@ mod tests {
 
         let engine = ExecutionEngine::new(&module, 2, &[], false);
 
-        let mut argument = 42;
+        let mut argument = 5;
         let mut result = -1;
 
         assert_eq!(
@@ -90,7 +90,7 @@ mod tests {
             Ok(())
         );
 
-        assert_eq!(argument, 42);
-        assert_eq!(result, 84);
+        assert_eq!(argument, 5);
+        assert_eq!(result, 120);
     }
 }
