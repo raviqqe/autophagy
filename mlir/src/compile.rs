@@ -193,7 +193,7 @@ fn compile_local_binding<'a>(
         },
         variables,
     )?;
-    let value = builder
+    let ptr = builder
         .append_operation(memref::alloca(
             context,
             MemRefType::new(value.r#type(), &[], None, None),
@@ -205,12 +205,14 @@ fn compile_local_binding<'a>(
         .result(0)?
         .into();
 
+    builder.append_operation(memref::store(value, ptr, &[], Location::unknown(context)));
+
     variables.insert(
         match &local.pat {
             syn::Pat::Ident(identifier) => identifier.ident.to_string(),
             _ => return Err(Error::NotSupported("non-identifier pattern")),
         },
-        Variable::new(value, true),
+        Variable::new(ptr, true),
     );
 
     Ok(())
