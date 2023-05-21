@@ -727,7 +727,7 @@ mod tests {
 
     #[test]
     fn r#let() {
-        #[allow(dead_code)]
+        #[allow(dead_code, clippy::let_and_return)]
         #[autophagy::quote]
         fn foo() -> usize {
             let x = 42usize;

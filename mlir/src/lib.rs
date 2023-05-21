@@ -33,7 +33,7 @@ mod tests {
         context
     }
 
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::assign_op_pattern)]
     #[autophagy::quote]
     fn factorial(mut x: i32) -> i32 {
         let mut y = 1i32;
