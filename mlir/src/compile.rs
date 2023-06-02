@@ -652,30 +652,76 @@ mod tests {
         assert!(module.as_operation().verify());
     }
 
-    #[test]
-    fn bool() {
-        #[allow(dead_code)]
-        #[autophagy::quote]
-        fn foo() -> bool {
-            true
+    mod literal {
+        use super::*;
+
+        #[test]
+        fn bool() {
+            #[allow(dead_code)]
+            #[autophagy::quote]
+            fn foo() -> bool {
+                true
+            }
+
+            let context = create_context();
+
+            let location = Location::unknown(&context);
+            let module = Module::new(location);
+
+            compile(&module, &foo_fn()).unwrap();
+
+            assert!(module.as_operation().verify());
         }
 
-        let context = create_context();
+        #[test]
+        fn float32() {
+            #[allow(dead_code)]
+            #[autophagy::quote]
+            fn foo() -> f32 {
+                42f32
+            }
 
-        let location = Location::unknown(&context);
-        let module = Module::new(location);
+            let context = create_context();
 
-        compile(&module, &foo_fn()).unwrap();
+            let location = Location::unknown(&context);
+            let module = Module::new(location);
 
-        assert!(module.as_operation().verify());
+            compile(&module, &foo_fn()).unwrap();
+
+            assert!(module.as_operation().verify());
+        }
+
+        #[test]
+        fn float64() {
+            #[allow(dead_code)]
+            #[autophagy::quote]
+            fn foo() -> f64 {
+                42f64
+            }
+
+            let context = create_context();
+
+            let location = Location::unknown(&context);
+            let module = Module::new(location);
+
+            compile(&module, &foo_fn()).unwrap();
+
+            assert!(module.as_operation().verify());
+        }
     }
 
     #[test]
-    fn float32() {
+    fn call() {
         #[allow(dead_code)]
         #[autophagy::quote]
-        fn foo() -> f32 {
-            42f32
+        fn foo(x: usize, y: usize) -> usize {
+            x + y
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn bar() -> usize {
+            foo(1, 2)
         }
 
         let context = create_context();
@@ -684,24 +730,7 @@ mod tests {
         let module = Module::new(location);
 
         compile(&module, &foo_fn()).unwrap();
-
-        assert!(module.as_operation().verify());
-    }
-
-    #[test]
-    fn float64() {
-        #[allow(dead_code)]
-        #[autophagy::quote]
-        fn foo() -> f64 {
-            42f64
-        }
-
-        let context = create_context();
-
-        let location = Location::unknown(&context);
-        let module = Module::new(location);
-
-        compile(&module, &foo_fn()).unwrap();
+        compile(&module, &bar_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
