@@ -29,6 +29,7 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
         syn::ReturnType::Default => vec![],
         syn::ReturnType::Type(_, r#type) => vec![compile_type(context, r#type)?],
     };
+    let mut variables = TrainMap::new();
 
     module.body().append_operation(func::func(
         context,
@@ -41,7 +42,6 @@ pub fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
                     .map(|&r#type| (r#type, location))
                     .collect::<Vec<_>>(),
             );
-            let mut variables = TrainMap::new();
 
             for result in function.sig.inputs.iter().map(|argument| match argument {
                 syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
