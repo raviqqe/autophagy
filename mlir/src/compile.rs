@@ -253,6 +253,19 @@ fn compile_expression<'a>(
             ))
             .result(0)?
             .into(),
+        syn::Expr::Call(call) => builder
+            .append_operation(func::call(
+                context,
+                compile_expression(context, builder, function, vairables),
+                &call
+                    .args
+                    .iter()
+                    .map(|argument| compile_expression(context, builder, argument, variables))
+                    .collect::<Vec<_>>()?,
+                location,
+            ))
+            .result(0)?
+            .into(),
         syn::Expr::If(r#if) => builder
             .append_operation(scf::r#if(
                 compile_expression(context, builder, &r#if.cond, variables)?,
