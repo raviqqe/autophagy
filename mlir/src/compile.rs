@@ -254,9 +254,8 @@ fn compile_expression<'a>(
             .result(0)?
             .into(),
         syn::Expr::Call(call) => builder
-            .append_operation(func::call(
-                context,
-                compile_expression(context, builder, function, vairables),
+            .append_operation(func::call_indirect(
+                compile_expression(context, builder, &call.func, variables)?,
                 &call
                     .args
                     .iter()
