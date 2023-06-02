@@ -261,7 +261,7 @@ fn compile_expression<'a>(
                     .args
                     .iter()
                     .map(|argument| compile_expression(context, builder, argument, variables))
-                    .collect::<Vec<_>>()?,
+                    .collect::<Result<Vec<_>, _>>()?,
                 location,
             ))
             .result(0)?
