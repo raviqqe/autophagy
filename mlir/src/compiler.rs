@@ -821,6 +821,24 @@ mod tests {
     }
 
     #[test]
+    fn dereference() {
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: &usize) -> usize {
+            *x
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
     fn r#if() {
         #[allow(dead_code)]
         #[autophagy::quote]
