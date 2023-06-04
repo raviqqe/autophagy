@@ -8,7 +8,7 @@ use melior::{
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
         ValueLike,
     },
-    Context, ContextRef,
+    ContextRef,
 };
 use std::collections::HashSet;
 use train_map::TrainMap;
