@@ -125,6 +125,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
     fn compile_primitive_type(&self, name: &str) -> Type<'c> {
         let context = self.context();
+        let context = unsafe { context.to_ref() };
 
         match name {
             "bool" => IntegerType::new(&context, 1).into(),
