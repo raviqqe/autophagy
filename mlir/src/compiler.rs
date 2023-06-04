@@ -7,6 +7,7 @@ use melior::{
             FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute, StringAttribute,
             TypeAttribute,
         },
+        operation::OperationBuilder,
         r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
         ValueLike,
@@ -284,15 +285,22 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 .result(0)?
                 .into(),
             syn::Expr::Call(call) => builder
-                .append_operation(func::call_indirect(
-                    self.compile_expression(builder, &call.func, variables)?,
-                    &call
-                        .args
-                        .iter()
-                        .map(|argument| self.compile_expression(builder, argument, variables))
-                        .collect::<Result<Vec<_>, _>>()?,
-                    location,
-                ))
+                .append_operation(
+                    OperationBuilder::new("func.call_indirect", location)
+                        .add_operands(&[self.compile_expression(builder, &call.func, variables)?])
+                        .add_operands(
+                            &call
+                                .args
+                                .iter()
+                                .map(|argument| {
+                                    self.compile_expression(builder, argument, variables)
+                                })
+                                .collect::<Result<Vec<_>, _>>()?,
+                        )
+                        // TODO
+                        .add_results(&[Type::index(context)])
+                        .build(),
+                )
                 .result(0)?
                 .into(),
             syn::Expr::If(r#if) => builder
