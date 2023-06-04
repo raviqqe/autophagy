@@ -1,5 +1,6 @@
 use crate::Error;
 use autophagy::Fn;
+use core::mem::transmute;
 use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
@@ -157,14 +158,26 @@ impl<'c, 'm> Compiler<'c, 'm> {
         function_scope: bool,
         variables: &mut TrainMap<String, Value>,
     ) -> Result<Region, Error> {
+        Ok(self
+            .compile_block_expression(block, function_scope, variables)?
+            .0)
+    }
+
+    fn compile_block_expression(
+        &self,
+        block: &syn::Block,
+        function_scope: bool,
+        variables: &mut TrainMap<String, Value>,
+    ) -> Result<(Region, Option<Type<'c>>), Error> {
         let builder = Block::new(&[]);
         let mut variables = variables.fork();
 
-        self.compile_statements(&builder, &block.stmts, function_scope, &mut variables)?;
+        let r#type =
+            self.compile_statements(&builder, &block.stmts, function_scope, &mut variables)?;
 
         let region = Region::new();
         region.append_block(builder);
-        Ok(region)
+        Ok((region, r#type))
     }
 
     fn compile_statements<'a>(
@@ -173,7 +186,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         statements: &[syn::Stmt],
         function_scope: bool,
         variables: &mut TrainMap<String, Value<'a>>,
-    ) -> Result<(), Error> {
+    ) -> Result<Option<Type<'c>>, Error> {
         let context = self.context();
         let location = Location::unknown(&context);
         let terminator = if function_scope {
@@ -204,7 +217,12 @@ impl<'c, 'm> Compiler<'c, 'm> {
             terminator(&[], location)
         });
 
-        Ok(())
+        Ok(if function_scope {
+            None
+        } else {
+            // TODO Fix Melior.
+            return_value.map(|value| unsafe { transmute(value.r#type()) })
+        })
     }
 
     fn compile_local_binding<'a>(
@@ -294,17 +312,21 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .result(0)?
                     .into(),
             ),
-            syn::Expr::Block(block) => Some(
-                builder
-                    .append_operation(scf::execute_region(
-                        // TODO Infer a result type.
-                        &[Type::index(context)],
-                        self.compile_block(&block.block, false, variables)?,
-                        location,
-                    ))
-                    .result(0)?
-                    .into(),
-            ),
+            syn::Expr::Block(block) => {
+                let (region, r#type) =
+                    self.compile_block_expression(&block.block, false, variables)?;
+
+                Some(
+                    builder
+                        .append_operation(scf::execute_region(
+                            &r#type.into_iter().collect::<Vec<_>>(),
+                            region,
+                            location,
+                        ))
+                        .result(0)?
+                        .into(),
+                )
+            }
             syn::Expr::Call(call) => {
                 let function = self.compile_expression_value(builder, &call.func, variables)?;
                 let r#type = FunctionType::try_from(function.r#type())?;
@@ -327,30 +349,35 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ok()
             }
             syn::Expr::If(r#if) => {
+                let condition = self.compile_expression_value(builder, &r#if.cond, variables)?;
+                let (then_region, then_type) =
+                    self.compile_block_expression(&r#if.then_branch, false, variables)?;
+                let (else_region, else_type) = if let Some((_, expression)) = &r#if.else_branch {
+                    let block = Block::new(&[]);
+                    let mut variables = variables.fork();
+
+                    let value = self.compile_expression(&block, expression, &mut variables)?;
+                    block.append_operation(scf::r#yield(
+                        &value.into_iter().collect::<Vec<_>>(),
+                        location,
+                    ));
+
+                    // TODO Fix Melior.
+                    let r#type = value.map(|value| unsafe { transmute(value.r#type()) });
+                    let region = Region::new();
+                    region.append_block(block);
+
+                    (region, r#type)
+                } else {
+                    (Region::new(), None)
+                };
+
                 builder
                     .append_operation(scf::r#if(
-                        self.compile_expression_value(builder, &r#if.cond, variables)?,
-                        // TODO Infer a result type.
-                        &[Type::index(context)],
-                        self.compile_block(&r#if.then_branch, false, variables)?,
-                        if let Some((_, expression)) = &r#if.else_branch {
-                            let block = Block::new(&[]);
-                            let mut variables = variables.fork();
-
-                            block.append_operation(scf::r#yield(
-                                &self
-                                    .compile_expression(&block, expression, &mut variables)?
-                                    .into_iter()
-                                    .collect::<Vec<_>>(),
-                                location,
-                            ));
-
-                            let region = Region::new();
-                            region.append_block(block);
-                            region
-                        } else {
-                            Region::new()
-                        },
+                        condition,
+                        &then_type.or(else_type).into_iter().collect::<Vec<_>>(),
+                        then_region,
+                        else_region,
                         location,
                     ))
                     .result(0)
