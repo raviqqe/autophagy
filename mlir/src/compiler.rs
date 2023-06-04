@@ -219,11 +219,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(if function_scope {
             None
-        } else if let Some(value) = return_value {
-            // TODO Fix Melior.
-            Some(unsafe { transmute(value.r#type()) })
         } else {
-            None
+            return_value.map(|value| unsafe { transmute(value.r#type()) })
         })
     }
 
