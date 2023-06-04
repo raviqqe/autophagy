@@ -127,6 +127,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     return Err(Error::NotSupported("custom type"));
                 }
             }
+            syn::Type::Reference(reference) => {
+                MemRefType::new(self.compile_type(&reference.elem)?, &[], None, None).into()
+            }
             _ => todo!(),
         })
     }
@@ -392,7 +395,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         // spell-checker: disable
         Ok(builder.append_operation(match &operation.op {
-            syn::UnOp::Deref(_) => todo!(),
+            syn::UnOp::Deref(_) => memref::load(value, &[], location),
             syn::UnOp::Neg(_) => arith::subi(
                 builder
                     .append_operation(arith::constant(
@@ -816,6 +819,24 @@ mod tests {
 
         compiler.compile(&foo_fn()).unwrap();
         compiler.compile(&bar_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn dereference() {
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: &usize) -> usize {
+            *x
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
