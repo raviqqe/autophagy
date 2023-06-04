@@ -104,12 +104,12 @@ mod tests {
     #[allow(clippy::assign_op_pattern)]
     #[autophagy::quote]
     fn fibonacci(x: i32) -> i32 {
-        if x <= 0 {
-            0
-        } else if x == 1 {
-            1
+        if x <= 0i32 {
+            0i32
+        } else if x == 1i32 {
+            1i32
         } else {
-            fibonacci(x - 1) + fibonacci(x - 2)
+            fibonacci(x - 1i32) + fibonacci(x - 2i32)
         }
     }
 
