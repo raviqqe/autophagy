@@ -220,6 +220,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(if function_scope {
             None
         } else {
+            // TODO Fix Melior.
             return_value.map(|value| unsafe { transmute(value.r#type()) })
         })
     }
