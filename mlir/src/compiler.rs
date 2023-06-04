@@ -137,14 +137,14 @@ impl<'c, 'm> Compiler<'c, 'm> {
         let context = unsafe { context.to_ref() };
 
         match name {
-            "bool" => IntegerType::new(&context, 1).into(),
-            "f32" => Type::float32(&context),
-            "f64" => Type::float64(&context),
-            "isize" | "usize" => Type::index(&context),
-            "i8" | "u8" => IntegerType::new(&context, 8).into(),
-            "i16" | "u16" => IntegerType::new(&context, 16).into(),
-            "i32" | "u32" => IntegerType::new(&context, 32).into(),
-            "i64" | "u64" => IntegerType::new(&context, 64).into(),
+            "bool" => IntegerType::new(context, 1).into(),
+            "f32" => Type::float32(context),
+            "f64" => Type::float64(context),
+            "isize" | "usize" => Type::index(context),
+            "i8" | "u8" => IntegerType::new(context, 8).into(),
+            "i16" | "u16" => IntegerType::new(context, 16).into(),
+            "i32" | "u32" => IntegerType::new(context, 32).into(),
+            "i64" | "u64" => IntegerType::new(context, 64).into(),
             _ => todo!(),
         }
     }
