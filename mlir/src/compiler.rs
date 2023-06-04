@@ -216,8 +216,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(if function_scope {
             None
         } else {
-            // TODO Fix Melior.
-            return_value.map(|value| unsafe { transmute(value.r#type()) })
+            return_value.map(|value| value.r#type())
         })
     }
 
@@ -360,8 +359,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         location,
                     ));
 
-                    // TODO Fix Melior.
-                    let r#type = value.map(|value| unsafe { transmute(value.r#type()) });
+                    let r#type = value.map(|value| value.r#type());
                     let region = Region::new();
                     region.append_block(block);
 
