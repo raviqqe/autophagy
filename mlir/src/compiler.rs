@@ -277,36 +277,39 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 .into(),
             syn::Expr::Block(block) => builder
                 .append_operation(scf::execute_region(
-                    // TODO
+                    // TODO Infer a result type.
                     &[Type::index(context)],
                     self.compile_block(&block.block, false, variables)?,
                     location,
                 ))
                 .result(0)?
                 .into(),
-            syn::Expr::Call(call) => builder
-                .append_operation(
-                    OperationBuilder::new("func.call_indirect", location)
-                        .add_operands(&[self.compile_expression(builder, &call.func, variables)?])
-                        .add_operands(
-                            &call
-                                .args
-                                .iter()
-                                .map(|argument| {
-                                    self.compile_expression(builder, argument, variables)
-                                })
-                                .collect::<Result<Vec<_>, _>>()?,
-                        )
-                        // TODO
-                        .add_results(&[Type::index(context)])
-                        .build(),
-                )
-                .result(0)?
-                .into(),
+            syn::Expr::Call(call) => {
+                let function = self.compile_expression(builder, &call.func, variables)?;
+                let r#type = FunctionType::try_from(function.r#type())?;
+
+                builder
+                    .append_operation(func::call_indirect(
+                        function,
+                        &call
+                            .args
+                            .iter()
+                            .map(|argument| self.compile_expression(builder, argument, variables))
+                            .collect::<Result<Vec<_>, _>>()?,
+                        &if r#type.result_count() > 0 {
+                            vec![r#type.result(0)?]
+                        } else {
+                            vec![]
+                        },
+                        location,
+                    ))
+                    .result(0)?
+                    .into()
+            }
             syn::Expr::If(r#if) => builder
                 .append_operation(scf::r#if(
                     self.compile_expression(builder, &r#if.cond, variables)?,
-                    // TODO
+                    // TODO Infer a result type.
                     &[Type::index(context)],
                     self.compile_block(&r#if.then_branch, false, variables)?,
                     if let Some((_, expression)) = &r#if.else_branch {
