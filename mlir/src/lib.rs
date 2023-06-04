@@ -1,12 +1,13 @@
-mod compile;
+mod compiler;
 mod error;
 
-pub use compile::compile;
+pub use compiler::Compiler;
 pub use error::Error;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use autophagy::Fn;
     use melior::{
         dialect::DialectRegistry,
         ir::{Location, Module},
@@ -30,6 +31,12 @@ mod tests {
         });
 
         context
+    }
+
+    fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
+        Compiler::new(module).compile(r#fn)?;
+
+        Ok(())
     }
 
     #[allow(clippy::assign_op_pattern)]
