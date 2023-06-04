@@ -263,7 +263,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 builder.append_operation(memref::store(
                     value,
-                    self.compile_ptr(&builder, &assign.left, variables)?,
+                    self.compile_ptr(&assign.left, variables)?,
                     &[],
                     location,
                 ));
@@ -359,12 +359,13 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
     fn compile_ptr<'a>(
         &self,
-        builder: &'a Block,
         expression: &syn::Expr,
         variables: &mut TrainMap<String, Value<'a>>,
     ) -> Result<Value<'a>, Error> {
         Ok(match expression {
-            syn::Expr::Path(path) => self.compile_path_ptr(builder, path, variables)?,
+            syn::Expr::Path(path) => {
+                self.compile_variable(&self.convert_path_to_identifier(path)?, variables)?
+            }
             _ => todo!("{:?}", expression),
         })
     }
@@ -523,45 +524,49 @@ impl<'c, 'm> Compiler<'c, 'm> {
         path: &syn::ExprPath,
         variables: &TrainMap<String, Value<'a>>,
     ) -> Result<Value<'a>, Error> {
-        Ok(builder
-            .append_operation(memref::load(
-                self.compile_path_ptr(builder, path, variables)?,
-                &[],
-                Location::unknown(&self.context()),
-            ))
-            .result(0)?
-            .into())
-    }
-
-    fn compile_path_ptr<'a>(
-        &self,
-        builder: &'a Block,
-        path: &syn::ExprPath,
-        variables: &TrainMap<String, Value<'a>>,
-    ) -> Result<Value<'a>, Error> {
         let context = &self.context();
 
-        if let Some(identifier) = path.path.get_ident() {
-            let name = identifier.to_string();
+        let name = self.convert_path_to_identifier(path)?;
 
-            if let Some(&value) = variables.get(&name) {
-                Ok(value)
-            } else if let Some(&r#type) = self.functions.get(&name) {
-                Ok(builder
-                    .append_operation(func::constant(
-                        context,
-                        FlatSymbolRefAttribute::new(context, &name),
-                        r#type,
-                        Location::unknown(context),
-                    ))
-                    .result(0)?
-                    .into())
-            } else {
-                Err(Error::VariableNotDefined(name))
-            }
+        if let Some(&r#type) = self.functions.get(&name) {
+            Ok(builder
+                .append_operation(func::constant(
+                    context,
+                    FlatSymbolRefAttribute::new(context, &name),
+                    r#type,
+                    Location::unknown(context),
+                ))
+                .result(0)?
+                .into())
+        } else {
+            Ok(builder
+                .append_operation(memref::load(
+                    self.compile_variable(&name, variables)?,
+                    &[],
+                    Location::unknown(&self.context()),
+                ))
+                .result(0)?
+                .into())
+        }
+    }
+
+    fn convert_path_to_identifier(&self, path: &syn::ExprPath) -> Result<String, Error> {
+        if let Some(identifier) = path.path.get_ident() {
+            Ok(identifier.to_string())
         } else {
             Err(Error::NotSupported("non-identifier path"))
         }
+    }
+
+    fn compile_variable<'a>(
+        &self,
+        name: &str,
+        variables: &TrainMap<String, Value<'a>>,
+    ) -> Result<Value<'a>, Error> {
+        variables
+            .get(name)
+            .ok_or_else(|| Error::VariableNotDefined(name.into()))
+            .copied()
     }
 
     // TODO Use a zero-sized type. (LLVM struct?)
