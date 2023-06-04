@@ -1,5 +1,6 @@
 use crate::Error;
 use autophagy::Fn;
+use core::mem::transmute;
 use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
@@ -173,7 +174,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         statements: &[syn::Stmt],
         function_scope: bool,
         variables: &mut TrainMap<String, Value<'a>>,
-    ) -> Result<(), Error> {
+    ) -> Result<Option<Type<'c>>, Error> {
         let context = self.context();
         let location = Location::unknown(&context);
         let terminator = if function_scope {
@@ -204,7 +205,14 @@ impl<'c, 'm> Compiler<'c, 'm> {
             terminator(&[], location)
         });
 
-        Ok(())
+        Ok(if function_scope {
+            None
+        } else if let Some(value) = return_value {
+            // TODO Fix Melior.
+            Some(unsafe { transmute(value.r#type()) })
+        } else {
+            None
+        })
     }
 
     fn compile_local_binding<'a>(
