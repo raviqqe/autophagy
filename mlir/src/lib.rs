@@ -33,8 +33,8 @@ mod tests {
         context
     }
 
-    fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
-        Compiler::new(module).compile(r#fn)?;
+    fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
+        Compiler::new(context, module).compile(r#fn)?;
 
         Ok(())
     }
@@ -59,7 +59,7 @@ mod tests {
 
         let mut module = Module::new(location);
 
-        compile(&module, &factorial_fn()).unwrap();
+        compile(&context, &module, &factorial_fn()).unwrap();
 
         assert!(module.as_operation().verify());
 
@@ -120,7 +120,7 @@ mod tests {
 
         let mut module = Module::new(location);
 
-        compile(&module, &fibonacci_fn()).unwrap();
+        compile(&context, &module, &fibonacci_fn()).unwrap();
 
         assert!(module.as_operation().verify());
 

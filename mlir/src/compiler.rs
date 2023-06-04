@@ -12,32 +12,30 @@ use melior::{
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
         ValueLike,
     },
-    ContextRef,
+    Context,
 };
 use std::collections::HashMap;
 use train_map::TrainMap;
 
 pub struct Compiler<'c, 'm> {
+    context: &'c Context,
     module: &'m Module<'c>,
     functions: HashMap<String, FunctionType<'c>>,
 }
 
 impl<'c, 'm> Compiler<'c, 'm> {
-    pub fn new(module: &'m Module<'c>) -> Self {
+    pub fn new(context: &'c Context, module: &'m Module<'c>) -> Self {
         Self {
+            context,
             module,
             functions: Default::default(),
         }
     }
 
-    fn context(&self) -> ContextRef<'c> {
-        self.module.context()
-    }
-
     pub fn compile(&mut self, r#fn: &Fn) -> Result<(), Error> {
         let function = r#fn.ast();
-        let context = self.module.context();
-        let location = Location::unknown(&context);
+        let context = self.context;
+        let location = Location::unknown(context);
         let argument_types = function
             .sig
             .inputs
@@ -54,8 +52,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         let mut variables = TrainMap::new();
 
         let name = function.sig.ident.to_string();
-        let function_type =
-            FunctionType::new(unsafe { context.to_ref() }, &argument_types, &result_types);
+        let function_type = FunctionType::new(context, &argument_types, &result_types);
         self.functions.insert(name.clone(), function_type);
 
         self.module.body().append_operation(func::func(
@@ -136,8 +133,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
     }
 
     fn compile_primitive_type(&self, name: &str) -> Type<'c> {
-        let context = self.context();
-        let context = unsafe { context.to_ref() };
+        let context = self.context;
 
         match name {
             "bool" => IntegerType::new(context, 1).into(),
@@ -187,8 +183,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
         function_scope: bool,
         variables: &mut TrainMap<String, Value<'c, 'a>>,
     ) -> Result<Option<Type<'c>>, Error> {
-        let context = self.context();
-        let location = Location::unknown(&context);
+        let context = self.context;
+        let location = Location::unknown(context);
         let terminator = if function_scope {
             func::r#return
         } else {
@@ -231,7 +227,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         local: &syn::Local,
         variables: &mut TrainMap<String, Value<'c, 'a>>,
     ) -> Result<(), Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
 
         let value = self.compile_expression_value(
             builder,
@@ -258,7 +254,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
             value,
             ptr,
             &[],
-            Location::unknown(&self.context()),
+            Location::unknown(&self.context),
         ));
 
         variables.insert(
@@ -293,7 +289,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         expression: &syn::Expr,
         variables: &mut TrainMap<String, Value<'c, 'a>>,
     ) -> Result<Option<Value<'c, 'a>>, Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
         let location = Location::unknown(context);
 
         Ok(match expression {
@@ -478,7 +474,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         operation: &syn::ExprUnary,
         variables: &mut TrainMap<String, Value<'c, 'a>>,
     ) -> Result<OperationRef<'c, 'a>, Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
         let location = Location::unknown(context);
         let value = self.compile_expression_value(builder, &operation.expr, variables)?;
 
@@ -520,7 +516,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         operation: &syn::ExprBinary,
         variables: &mut TrainMap<String, Value<'c, 'a>>,
     ) -> Result<OperationRef<'c, 'a>, Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
         let location = Location::unknown(context);
         let left = self.compile_expression_value(builder, &operation.left, variables)?;
         let right = self.compile_expression_value(builder, &operation.right, variables)?;
@@ -577,7 +573,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         builder: &'a Block<'c>,
         literal: &syn::ExprLit,
     ) -> Result<OperationRef<'c, 'a>, Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
         let location = Location::unknown(context);
 
         Ok(builder.append_operation(match &literal.lit {
@@ -626,7 +622,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         path: &syn::ExprPath,
         variables: &TrainMap<String, Value<'c, 'a>>,
     ) -> Result<Value<'c, 'a>, Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
         let name = self.convert_path_to_identifier(path)?;
 
         if let Some(&r#type) = self.functions.get(&name) {
@@ -671,7 +667,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
     }
 
     fn compile_unit<'a>(&self, builder: &'a Block<'c>) -> Result<Value<'c, 'a>, Error> {
-        let context = unsafe { self.context().to_ref() };
+        let context = self.context;
 
         Ok(builder
             .append_operation(llvm::undef(
@@ -711,8 +707,8 @@ mod tests {
         context
     }
 
-    fn compile(module: &Module, r#fn: &Fn) -> Result<(), Error> {
-        Compiler::new(module).compile(r#fn)?;
+    fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
+        Compiler::new(context, module).compile(r#fn)?;
 
         Ok(())
     }
@@ -724,7 +720,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::add_fn()).unwrap();
+        compile(&context, &module, &math::add_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -736,7 +732,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::sub_fn()).unwrap();
+        compile(&context, &module, &math::sub_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -748,7 +744,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::mul_fn()).unwrap();
+        compile(&context, &module, &math::mul_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -760,7 +756,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::div_fn()).unwrap();
+        compile(&context, &module, &math::div_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -772,7 +768,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::rem_fn()).unwrap();
+        compile(&context, &module, &math::rem_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -784,7 +780,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::neg_fn()).unwrap();
+        compile(&context, &module, &math::neg_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -796,7 +792,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::not_fn()).unwrap();
+        compile(&context, &module, &math::not_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -808,7 +804,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::and_fn()).unwrap();
+        compile(&context, &module, &math::and_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -820,7 +816,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &math::or_fn()).unwrap();
+        compile(&context, &module, &math::or_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -841,7 +837,7 @@ mod tests {
             let location = Location::unknown(&context);
             let module = Module::new(location);
 
-            compile(&module, &foo_fn()).unwrap();
+            compile(&context, &module, &foo_fn()).unwrap();
 
             assert!(module.as_operation().verify());
         }
@@ -859,7 +855,7 @@ mod tests {
             let location = Location::unknown(&context);
             let module = Module::new(location);
 
-            compile(&module, &foo_fn()).unwrap();
+            compile(&context, &module, &foo_fn()).unwrap();
 
             assert!(module.as_operation().verify());
         }
@@ -877,7 +873,7 @@ mod tests {
             let location = Location::unknown(&context);
             let module = Module::new(location);
 
-            compile(&module, &foo_fn()).unwrap();
+            compile(&context, &module, &foo_fn()).unwrap();
 
             assert!(module.as_operation().verify());
         }
@@ -902,7 +898,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        let mut compiler = Compiler::new(&module);
+        let mut compiler = Compiler::new(&context, &module);
 
         compiler.compile(&foo_fn()).unwrap();
         compiler.compile(&bar_fn()).unwrap();
@@ -923,7 +919,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_fn()).unwrap();
+        compile(&context, &module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -945,7 +941,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_fn()).unwrap();
+        compile(&context, &module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -965,7 +961,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_fn()).unwrap();
+        compile(&context, &module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -984,7 +980,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_fn()).unwrap();
+        compile(&context, &module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -1005,7 +1001,7 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_fn()).unwrap();
+        compile(&context, &module, &foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
