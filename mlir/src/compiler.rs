@@ -334,6 +334,40 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 .compile_expression_literal(builder, literal)?
                 .result(0)?
                 .into(),
+            syn::Expr::Loop(r#loop) => {
+                builder.append_operation(scf::r#while(
+                    &[],
+                    &[],
+                    {
+                        let block = Block::new(&[]);
+
+                        block.append_operation(scf::condition(
+                            block
+                                .append_operation(arith::constant(
+                                    context,
+                                    IntegerAttribute::new(
+                                        true as i64,
+                                        IntegerType::new(context, 1).into(),
+                                    )
+                                    .into(),
+                                    location,
+                                ))
+                                .result(0)?
+                                .into(),
+                            &[],
+                            location,
+                        ));
+
+                        let region = Region::new();
+                        region.append_block(block);
+                        region
+                    },
+                    self.compile_block(&r#loop.body, false, variables)?,
+                    location,
+                ));
+
+                self.compile_unit(builder)?
+            }
             syn::Expr::Path(path) => self.compile_path(builder, path, variables)?,
             syn::Expr::Unary(operation) => self
                 .compile_unary_operation(builder, operation, variables)?
