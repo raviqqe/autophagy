@@ -259,7 +259,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         variables: &mut TrainMap<String, Value<'a>>,
     ) -> Result<Value<'a>, Error> {
         Ok(
-            if let Some(value) = self.compile_expression(builder, &expression, variables)? {
+            if let Some(value) = self.compile_expression(builder, expression, variables)? {
                 value
             } else {
                 self.compile_unit(builder)?
@@ -947,6 +947,7 @@ mod tests {
         #[allow(dead_code)]
         #[autophagy::quote]
         fn foo() {
+            #[allow(clippy::empty_loop)]
             loop {}
         }
 
