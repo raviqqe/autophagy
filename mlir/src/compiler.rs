@@ -7,7 +7,6 @@ use melior::{
             FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute, StringAttribute,
             TypeAttribute,
         },
-        operation::OperationBuilder,
         r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
         ValueLike,
