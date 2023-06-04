@@ -897,6 +897,24 @@ mod tests {
     }
 
     #[test]
+    fn r#loop() {
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo() {
+            loop {}
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&module, &foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
     fn r#while() {
         #[allow(dead_code)]
         #[autophagy::quote]
