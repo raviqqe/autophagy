@@ -392,7 +392,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         // spell-checker: disable
         Ok(builder.append_operation(match &operation.op {
-            syn::UnOp::Deref(_) => todo!(),
+            syn::UnOp::Deref(_) => memref::load(value, &[], location),
             syn::UnOp::Neg(_) => arith::subi(
                 builder
                     .append_operation(arith::constant(
