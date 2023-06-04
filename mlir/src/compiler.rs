@@ -1,6 +1,6 @@
 use crate::Error;
 use autophagy::Fn;
-use core::mem::transmute;
+
 use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
@@ -56,8 +56,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
         self.functions.insert(name.clone(), function_type);
 
         self.module.body().append_operation(func::func(
-            &context,
-            StringAttribute::new(&context, &name),
+            context,
+            StringAttribute::new(context, &name),
             TypeAttribute::new(function_type.into()),
             {
                 let block = Block::new(
@@ -80,7 +80,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                     let ptr = block
                         .append_operation(memref::alloca(
-                            &context,
+                            context,
                             MemRefType::new(self.compile_type(r#type)?, &[], None, None),
                             &[],
                             &[],
@@ -107,8 +107,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 region
             },
             &[(
-                Identifier::new(&context, "llvm.emit_c_interface"),
-                Attribute::unit(&context),
+                Identifier::new(context, "llvm.emit_c_interface"),
+                Attribute::unit(context),
             )],
             location,
         ));
@@ -239,7 +239,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         )?;
         let ptr = builder
             .append_operation(memref::alloca(
-                &context,
+                context,
                 MemRefType::new(value.r#type(), &[], None, None),
                 &[],
                 &[],
@@ -253,7 +253,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
             value,
             ptr,
             &[],
-            Location::unknown(&self.context),
+            Location::unknown(self.context),
         ));
 
         variables.insert(
