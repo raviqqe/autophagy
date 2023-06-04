@@ -1,7 +1,7 @@
 use crate::Error;
 use autophagy::Fn;
 use melior::{
-    dialect::{arith, func, memref, scf},
+    dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
             FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute, StringAttribute,
@@ -181,27 +181,28 @@ impl<'c, 'm> Compiler<'c, 'm> {
         } else {
             scf::r#yield
         };
-        let mut terminated = false;
+        let mut return_value = None;
 
-        for (index, statement) in statements.iter().enumerate() {
+        for statement in statements {
             match statement {
                 syn::Stmt::Local(local) => self.compile_local_binding(builder, local, variables)?,
                 syn::Stmt::Item(_) => return Err(Error::NotSupported("local item definition")),
                 syn::Stmt::Expr(expression, semicolon) => {
                     let value = self.compile_expression(builder, expression, variables)?;
 
-                    if index == statements.len() - 1 && semicolon.is_none() {
-                        builder.append_operation(terminator(&[value], location));
-                        terminated = true;
+                    if semicolon.is_none() {
+                        return_value = value;
                     }
                 }
                 syn::Stmt::Macro(_) => return Err(Error::NotSupported("macro")),
             }
         }
 
-        if !terminated {
-            builder.append_operation(terminator(&[], location));
-        }
+        builder.append_operation(if let Some(value) = return_value {
+            terminator(&[value], location)
+        } else {
+            terminator(&[], location)
+        });
 
         Ok(())
     }
@@ -212,7 +213,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         local: &syn::Local,
         variables: &mut TrainMap<String, Value<'a>>,
     ) -> Result<(), Error> {
-        let value = self.compile_expression(
+        let value = self.compile_expression_value(
             builder,
             if let Some(initial) = &local.init {
                 &initial.expr
@@ -251,18 +252,33 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(())
     }
 
-    fn compile_expression<'a>(
+    fn compile_expression_value<'a>(
         &self,
         builder: &'a Block,
         expression: &syn::Expr,
         variables: &mut TrainMap<String, Value<'a>>,
     ) -> Result<Value<'a>, Error> {
+        Ok(
+            if let Some(value) = self.compile_expression(builder, &expression, variables)? {
+                value
+            } else {
+                self.compile_unit(builder)?
+            },
+        )
+    }
+
+    fn compile_expression<'a>(
+        &self,
+        builder: &'a Block,
+        expression: &syn::Expr,
+        variables: &mut TrainMap<String, Value<'a>>,
+    ) -> Result<Option<Value<'a>>, Error> {
         let context = &self.context();
         let location = Location::unknown(context);
 
         Ok(match expression {
             syn::Expr::Assign(assign) => {
-                let value = self.compile_expression(builder, &assign.right, variables)?;
+                let value = self.compile_expression_value(builder, &assign.right, variables)?;
 
                 builder.append_operation(memref::store(
                     value,
@@ -271,23 +287,26 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     location,
                 ));
 
-                value
+                Some(value)
             }
-            syn::Expr::Binary(operation) => self
-                .compile_binary_operation(builder, operation, variables)?
-                .result(0)?
-                .into(),
-            syn::Expr::Block(block) => builder
-                .append_operation(scf::execute_region(
-                    // TODO Infer a result type.
-                    &[Type::index(context)],
-                    self.compile_block(&block.block, false, variables)?,
-                    location,
-                ))
-                .result(0)?
-                .into(),
+            syn::Expr::Binary(operation) => Some(
+                self.compile_binary_operation(builder, operation, variables)?
+                    .result(0)?
+                    .into(),
+            ),
+            syn::Expr::Block(block) => Some(
+                builder
+                    .append_operation(scf::execute_region(
+                        // TODO Infer a result type.
+                        &[Type::index(context)],
+                        self.compile_block(&block.block, false, variables)?,
+                        location,
+                    ))
+                    .result(0)?
+                    .into(),
+            ),
             syn::Expr::Call(call) => {
-                let function = self.compile_expression(builder, &call.func, variables)?;
+                let function = self.compile_expression_value(builder, &call.func, variables)?;
                 let r#type = FunctionType::try_from(function.r#type())?;
 
                 builder
@@ -296,47 +315,53 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         &call
                             .args
                             .iter()
-                            .map(|argument| self.compile_expression(builder, argument, variables))
+                            .map(|argument| {
+                                self.compile_expression_value(builder, argument, variables)
+                            })
                             .collect::<Result<Vec<_>, _>>()?,
-                        &if r#type.result_count() > 0 {
-                            vec![r#type.result(0)?]
+                        &r#type.result(0).into_iter().collect::<Vec<_>>(),
+                        location,
+                    ))
+                    .result(0)
+                    .map(Into::into)
+                    .ok()
+            }
+            syn::Expr::If(r#if) => {
+                builder
+                    .append_operation(scf::r#if(
+                        self.compile_expression_value(builder, &r#if.cond, variables)?,
+                        // TODO Infer a result type.
+                        &[Type::index(context)],
+                        self.compile_block(&r#if.then_branch, false, variables)?,
+                        if let Some((_, expression)) = &r#if.else_branch {
+                            let block = Block::new(&[]);
+                            let mut variables = variables.fork();
+
+                            block.append_operation(scf::r#yield(
+                                &self
+                                    .compile_expression(&block, expression, &mut variables)?
+                                    .into_iter()
+                                    .collect::<Vec<_>>(),
+                                location,
+                            ));
+
+                            let region = Region::new();
+                            region.append_block(block);
+                            region
                         } else {
-                            vec![]
+                            Region::new()
                         },
                         location,
                     ))
-                    .result(0)?
-                    .into()
+                    .result(0)
+                    .map(Into::into)
+                    .ok()
             }
-            syn::Expr::If(r#if) => builder
-                .append_operation(scf::r#if(
-                    self.compile_expression(builder, &r#if.cond, variables)?,
-                    // TODO Infer a result type.
-                    &[Type::index(context)],
-                    self.compile_block(&r#if.then_branch, false, variables)?,
-                    if let Some((_, expression)) = &r#if.else_branch {
-                        let block = Block::new(&[]);
-                        let mut variables = variables.fork();
-
-                        block.append_operation(scf::r#yield(
-                            &[self.compile_expression(&block, expression, &mut variables)?],
-                            location,
-                        ));
-
-                        let region = Region::new();
-                        region.append_block(block);
-                        region
-                    } else {
-                        Region::new()
-                    },
-                    location,
-                ))
-                .result(0)?
-                .into(),
             syn::Expr::Lit(literal) => self
                 .compile_expression_literal(builder, literal)?
-                .result(0)?
-                .into(),
+                .result(0)
+                .map(Into::into)
+                .ok(),
             syn::Expr::Loop(r#loop) => {
                 builder.append_operation(scf::r#while(
                     &[],
@@ -369,13 +394,14 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     location,
                 ));
 
-                self.compile_unit(builder)?
+                None
             }
-            syn::Expr::Path(path) => self.compile_path(builder, path, variables)?,
+            syn::Expr::Path(path) => Some(self.compile_path(builder, path, variables)?),
             syn::Expr::Unary(operation) => self
                 .compile_unary_operation(builder, operation, variables)?
-                .result(0)?
-                .into(),
+                .result(0)
+                .map(Into::into)
+                .ok(),
             syn::Expr::While(r#while) => {
                 builder.append_operation(scf::r#while(
                     &[],
@@ -385,7 +411,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         let mut variables = variables.fork();
 
                         block.append_operation(scf::condition(
-                            self.compile_expression(&block, &r#while.cond, &mut variables)?,
+                            self.compile_expression_value(&block, &r#while.cond, &mut variables)?,
                             &[],
                             location,
                         ));
@@ -398,7 +424,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     location,
                 ));
 
-                self.compile_unit(builder)?
+                None
             }
             _ => todo!("{:?}", expression),
         })
@@ -425,7 +451,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
     ) -> Result<OperationRef<'a>, Error> {
         let context = &self.context();
         let location = Location::unknown(context);
-        let value = self.compile_expression(builder, &operation.expr, variables)?;
+        let value = self.compile_expression_value(builder, &operation.expr, variables)?;
 
         // spell-checker: disable
         Ok(builder.append_operation(match &operation.op {
@@ -467,8 +493,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
     ) -> Result<OperationRef<'a>, Error> {
         let context = &self.context();
         let location = Location::unknown(context);
-        let left = self.compile_expression(builder, &operation.left, variables)?;
-        let right = self.compile_expression(builder, &operation.right, variables)?;
+        let left = self.compile_expression_value(builder, &operation.left, variables)?;
+        let right = self.compile_expression_value(builder, &operation.right, variables)?;
 
         // spell-checker: disable
         Ok(builder.append_operation(match &operation.op {
@@ -616,14 +642,13 @@ impl<'c, 'm> Compiler<'c, 'm> {
             .copied()
     }
 
-    // TODO Use a zero-sized type. (LLVM struct?)
     fn compile_unit<'a>(&self, builder: &'a Block) -> Result<Value<'a>, Error> {
         let context = &self.context();
 
         Ok(builder
-            .append_operation(arith::constant(
-                context,
-                IntegerAttribute::new(0, IntegerType::new(context, 1).into()).into(),
+            .append_operation(llvm::undef(
+                // TODO Should we use zero-field struct instead?
+                llvm::r#type::void(context),
                 Location::unknown(context),
             ))
             .result(0)?
