@@ -127,6 +127,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     return Err(Error::NotSupported("custom type"));
                 }
             }
+            syn::Type::Reference(reference) => {
+                MemRefType::new(self.compile_type(&reference.elem)?, &[], None, None).into()
+            }
             _ => todo!(),
         })
     }
