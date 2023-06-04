@@ -503,9 +503,9 @@ checksum = "518ef76f2f87365916b142844c16d8fefd85039bc5699050210a7778ee1cd1de"
 
 [[package]]
 name = "melior"
-version = "0.8.10"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5048e14daae0fea2aaddb54813108b33d390a94001f7ca8459bd5aedc26b8a6e"
+checksum = "174e90f4df98e0b761286105f99f33d6d4f97cb72557c78afb23311e702ece62"
 dependencies = [
  "criterion",
  "dashmap",
@@ -516,9 +516,9 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.3.5"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddc2c18fee52d79a5e6111a5b5db0d4312d738726768a7be3de333e38d8b1930"
+checksum = "36a2cdbc01b1346da5b8e4d28ffb620aeaca2b3ebcdcfc7f3579d39acade835b"
 dependencies = [
  "convert_case",
  "once_cell",
