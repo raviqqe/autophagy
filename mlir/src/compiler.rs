@@ -3,7 +3,10 @@ use autophagy::Fn;
 use melior::{
     dialect::{arith, func, memref, scf},
     ir::{
-        attribute::{FloatAttribute, IntegerAttribute, StringAttribute, TypeAttribute},
+        attribute::{
+            FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute, StringAttribute,
+            TypeAttribute,
+        },
         r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
         ValueLike,
@@ -260,7 +263,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 builder.append_operation(memref::store(
                     value,
-                    self.compile_ptr(&assign.left, variables)?,
+                    self.compile_ptr(&builder, &assign.left, variables)?,
                     &[],
                     location,
                 ));
@@ -356,11 +359,12 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
     fn compile_ptr<'a>(
         &self,
+        builder: &'a Block,
         expression: &syn::Expr,
         variables: &mut TrainMap<String, Value<'a>>,
     ) -> Result<Value<'a>, Error> {
         Ok(match expression {
-            syn::Expr::Path(path) => self.compile_path_ptr(path, variables)?,
+            syn::Expr::Path(path) => self.compile_path_ptr(builder, path, variables)?,
             _ => todo!("{:?}", expression),
         })
     }
@@ -521,7 +525,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
     ) -> Result<Value<'a>, Error> {
         Ok(builder
             .append_operation(memref::load(
-                self.compile_path_ptr(path, variables)?,
+                self.compile_path_ptr(builder, path, variables)?,
                 &[],
                 Location::unknown(&self.context()),
             ))
@@ -531,15 +535,30 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
     fn compile_path_ptr<'a>(
         &self,
+        builder: &'a Block,
         path: &syn::ExprPath,
         variables: &TrainMap<String, Value<'a>>,
     ) -> Result<Value<'a>, Error> {
+        let context = &self.context();
+
         if let Some(identifier) = path.path.get_ident() {
             let name = identifier.to_string();
 
-            Ok(*variables
-                .get(&name)
-                .ok_or(Error::VariableNotDefined(name))?)
+            if let Some(&value) = variables.get(&name) {
+                Ok(value)
+            } else if let Some(&r#type) = self.functions.get(&name) {
+                Ok(builder
+                    .append_operation(func::constant(
+                        context,
+                        FlatSymbolRefAttribute::new(context, &name),
+                        r#type,
+                        Location::unknown(context),
+                    ))
+                    .result(0)?
+                    .into())
+            } else {
+                Err(Error::VariableNotDefined(name))
+            }
         } else {
             Err(Error::NotSupported("non-identifier path"))
         }
@@ -778,8 +797,10 @@ mod tests {
         let location = Location::unknown(&context);
         let module = Module::new(location);
 
-        compile(&module, &foo_fn()).unwrap();
-        compile(&module, &bar_fn()).unwrap();
+        let mut compiler = Compiler::new(&module);
+
+        compiler.compile(&foo_fn()).unwrap();
+        compiler.compile(&bar_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
