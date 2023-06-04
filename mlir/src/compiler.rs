@@ -10,19 +10,19 @@ use melior::{
     },
     ContextRef,
 };
-use std::collections::HashSet;
+use std::collections::HashMap;
 use train_map::TrainMap;
 
 pub struct Compiler<'c, 'm> {
     module: &'m Module<'c>,
-    globals: HashSet<String>,
+    functions: HashMap<String, FunctionType<'c>>,
 }
 
 impl<'c, 'm> Compiler<'c, 'm> {
     pub fn new(module: &'m Module<'c>) -> Self {
         Self {
             module,
-            globals: Default::default(),
+            functions: Default::default(),
         }
     }
 
@@ -30,10 +30,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
         self.module.context()
     }
 
-    pub fn compile(&self, r#fn: &Fn) -> Result<(), Error> {
+    pub fn compile(&mut self, r#fn: &Fn) -> Result<(), Error> {
         let function = r#fn.ast();
-        let context = &self.module.context();
-        let location = Location::unknown(context);
+        let context = self.module.context();
+        let location = Location::unknown(&context);
         let argument_types = function
             .sig
             .inputs
@@ -49,10 +49,15 @@ impl<'c, 'm> Compiler<'c, 'm> {
         };
         let mut variables = TrainMap::new();
 
+        let name = function.sig.ident.to_string();
+        let function_type =
+            FunctionType::new(unsafe { context.to_ref() }, &argument_types, &result_types);
+        self.functions.insert(name.clone(), function_type);
+
         self.module.body().append_operation(func::func(
-            context,
-            StringAttribute::new(context, &function.sig.ident.to_string()),
-            TypeAttribute::new(FunctionType::new(context, &argument_types, &result_types).into()),
+            &context,
+            StringAttribute::new(&context, &name),
+            TypeAttribute::new(function_type.into()),
             {
                 let block = Block::new(
                     &argument_types
@@ -74,7 +79,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                     let ptr = block
                         .append_operation(memref::alloca(
-                            context,
+                            &context,
                             MemRefType::new(self.compile_type(r#type)?, &[], None, None),
                             &[],
                             &[],
@@ -101,8 +106,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 region
             },
             &[(
-                Identifier::new(context, "llvm.emit_c_interface"),
-                Attribute::unit(context),
+                Identifier::new(&context, "llvm.emit_c_interface"),
+                Attribute::unit(&context),
             )],
             location,
         ));
