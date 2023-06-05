@@ -62,8 +62,8 @@ fn generate_struct(
     });
 
     Ok(quote! {
-        #visibility fn #quote_name() -> #crate_path::Fn {
-            #crate_path::Fn::new(#name_string, syn::parse2(quote::quote!(#r#struct)).unwrap())
+        #visibility fn #quote_name() -> #crate_path::Struct {
+            #crate_path::Struct::new(#name_string, syn::parse2(quote::quote!(#r#struct)).unwrap())
         }
 
         #r#struct
