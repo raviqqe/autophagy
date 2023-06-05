@@ -4,7 +4,9 @@ Yet another AOT compiler for Rust to realize true isomorphism.
 
 ## Background
 
-> WIP
+Most of existing Rust interpreters are just wrappers around `cargo build` or `rustc`. Thus, it incurs extra overhead of process spawns or file system access. Depending on use cases, we cannot adopt the same approach to compile and run Rust codes on Rust programs themselves.
+
+This crate aims to provide fully in memory compilation of Rust codes into assembly to help software that need dynamic code generation.
 
 ## Examples
 
