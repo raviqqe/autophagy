@@ -34,7 +34,7 @@ mod tests {
     }
 
     fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
-        Compiler::new(context, module).compile(r#fn)?;
+        Compiler::new(context, module).compile_fn(r#fn)?;
 
         Ok(())
     }

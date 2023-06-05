@@ -17,11 +17,16 @@ use melior::{
 use std::collections::HashMap;
 use train_map::TrainMap;
 
+struct StructInfo<'c> {
+    r#type: Type<'c>,
+    fields: HashMap<String, usize>,
+}
+
 pub struct Compiler<'c, 'm> {
     context: &'c Context,
     module: &'m Module<'c>,
     functions: HashMap<String, FunctionType<'c>>,
-    structs: HashMap<String, Type<'c>>,
+    structs: HashMap<String, StructInfo<'c>>,
 }
 
 impl<'c, 'm> Compiler<'c, 'm> {
@@ -37,16 +42,27 @@ impl<'c, 'm> Compiler<'c, 'm> {
     pub fn compile_struct(&mut self, r#struct: &Struct) -> Result<(), Error> {
         self.structs.insert(
             r#struct.name().into(),
-            llvm::r#type::r#struct(
-                self.context,
-                &r#struct
+            StructInfo {
+                r#type: llvm::r#type::r#struct(
+                    self.context,
+                    &r#struct
+                        .ast()
+                        .fields
+                        .iter()
+                        .map(|field| self.compile_type(&field.ty))
+                        .collect::<Result<Vec<_>, _>>()?,
+                    false,
+                ),
+                fields: r#struct
                     .ast()
                     .fields
                     .iter()
-                    .map(|field| self.compile_type(&field.ty))
-                    .collect::<Result<Vec<_>, _>>()?,
-                false,
-            ),
+                    .enumerate()
+                    .flat_map(|(index, field)| {
+                        field.ident.as_ref().map(|ident| (ident.to_string(), index))
+                    })
+                    .collect(),
+            },
         );
 
         Ok(())
@@ -726,7 +742,7 @@ mod tests {
     }
 
     fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
-        Compiler::new(context, module).compile(r#fn)?;
+        Compiler::new(context, module).compile_fn(r#fn)?;
 
         Ok(())
     }
@@ -918,8 +934,8 @@ mod tests {
 
         let mut compiler = Compiler::new(&context, &module);
 
-        compiler.compile(&foo_fn()).unwrap();
-        compiler.compile(&bar_fn()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+        compiler.compile_fn(&bar_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
