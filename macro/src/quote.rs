@@ -21,17 +21,9 @@ fn generate_function(
 ) -> Result<TokenStream, Box<dyn Error>> {
     let crate_path = parse_crate_path(attributes)?;
     let ident = &function.sig.ident;
-    let ident_string = ident
-        .to_string()
-        .strip_prefix(RAW_STRING_PREFIX)
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| ident.to_string());
     let visibility = &function.vis;
-    let quote_name = Ident::new(&(ident_string + "_fn"), ident.span());
-    let name_string = Expr::Lit(ExprLit {
-        attrs: Vec::new(),
-        lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
-    });
+    let quote_name = Ident::new(&get_quote_name(ident, "_fn"), ident.span());
+    let name_string = get_name_string(ident);
 
     Ok(quote! {
         #visibility fn #quote_name() -> #crate_path::Fn {
@@ -49,17 +41,9 @@ fn generate_struct(
 ) -> Result<TokenStream, Box<dyn Error>> {
     let crate_path = parse_crate_path(attributes)?;
     let ident = &r#struct.ident;
-    let ident_string = ident
-        .to_string()
-        .strip_prefix(RAW_STRING_PREFIX)
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| ident.to_string());
     let visibility = &r#struct.vis;
-    let quote_name = Ident::new(&(ident_string.to_lowercase() + "_struct"), ident.span());
-    let name_string = Expr::Lit(ExprLit {
-        attrs: Vec::new(),
-        lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
-    });
+    let quote_name = Ident::new(&get_quote_name(ident, "_struct"), ident.span());
+    let name_string = get_name_string(ident);
 
     Ok(quote! {
         #visibility fn #quote_name() -> #crate_path::Struct {
@@ -69,4 +53,21 @@ fn generate_struct(
         #r#struct
     }
     .into())
+}
+
+fn get_quote_name(ident: &Ident, suffix: &str) -> String {
+    ident
+        .to_string()
+        .strip_prefix(RAW_STRING_PREFIX)
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| ident.to_string())
+        .to_lowercase()
+        + suffix
+}
+
+fn get_name_string(ident: &Ident) -> Expr {
+    Expr::Lit(ExprLit {
+        attrs: Vec::new(),
+        lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
+    })
 }
