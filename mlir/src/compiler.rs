@@ -540,6 +540,23 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 self.compile_expression(builder, &parenthesis.expr, variables)?
             }
             syn::Expr::Path(path) => Some(self.compile_path(builder, path, variables)?),
+            syn::Expr::Struct(r#struct) => {
+                let name = self.convert_path_to_identifier(&r#struct.path)?;
+                let info = self
+                    .structs
+                    .get(&name)
+                    .ok_or_else(|| Error::StructNotDefined(name))?;
+                let value = builder
+                    .append_operation(llvm::undef(info.r#type, location))
+                    .result(0)?
+                    .into();
+
+                for (index, field) in info.field_type.iter().enumerate() {
+                    foo = foo;
+                }
+
+                Some(builder.append_operation())
+            }
             syn::Expr::Unary(operation) => self
                 .compile_unary_operation(builder, operation, variables)?
                 .result(0)
@@ -581,7 +598,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
     ) -> Result<Value<'c, 'a>, Error> {
         Ok(match expression {
             syn::Expr::Path(path) => {
-                self.compile_variable(&self.convert_path_to_identifier(path)?, variables)?
+                self.compile_variable(&self.convert_path_to_identifier(&path.path)?, variables)?
             }
             _ => self.compile_expression_value(builder, expression, variables)?,
         })
@@ -742,7 +759,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         variables: &TrainMap<String, Value<'c, 'a>>,
     ) -> Result<Value<'c, 'a>, Error> {
         let context = self.context;
-        let name = self.convert_path_to_identifier(path)?;
+        let name = self.convert_path_to_identifier(&path.path)?;
 
         if let Some(&r#type) = self.functions.get(&name) {
             Ok(builder
@@ -766,8 +783,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
         }
     }
 
-    fn convert_path_to_identifier(&self, path: &syn::ExprPath) -> Result<String, Error> {
-        if let Some(identifier) = path.path.get_ident() {
+    fn convert_path_to_identifier(&self, path: &syn::Path) -> Result<String, Error> {
+        if let Some(identifier) = path.get_ident() {
             Ok(identifier.to_string())
         } else {
             Err(Error::NotSupported("non-identifier path"))
