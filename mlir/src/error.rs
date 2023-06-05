@@ -8,10 +8,12 @@ use std::{
 pub enum Error {
     AddFn(String),
     Melior(melior::Error),
+    NotSupported(&'static str),
     Syn(syn::Error),
+    StructFieldNotDefined(String, String),
+    StructNotDefined(String),
     ValueExpected(String),
     VariableNotDefined(String),
-    NotSupported(&'static str),
 }
 
 impl Display for Error {
@@ -25,6 +27,16 @@ impl Display for Error {
                 write!(formatter, "{name} not supported")
             }
             Self::Syn(error) => write!(formatter, "{}", error),
+            Self::StructFieldNotDefined(r#type, field) => {
+                write!(
+                    formatter,
+                    "struct type field \"{}\" not defined: {}",
+                    field, r#type
+                )
+            }
+            Self::StructNotDefined(message) => {
+                write!(formatter, "struct type not defined: {}", message)
+            }
             Self::ValueExpected(message) => write!(formatter, "value expected: {}", message),
             Self::VariableNotDefined(name) => {
                 write!(formatter, "variable not defined: {name}")

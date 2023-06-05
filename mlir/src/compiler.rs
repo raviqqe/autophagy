@@ -18,7 +18,8 @@ use train_map::TrainMap;
 
 struct StructInfo<'c> {
     r#type: Type<'c>,
-    fields: HashMap<String, usize>,
+    field_types: Vec<Type<'c>>,
+    field_indices: HashMap<String, usize>,
 }
 
 pub struct Compiler<'c, 'm> {
@@ -39,20 +40,19 @@ impl<'c, 'm> Compiler<'c, 'm> {
     }
 
     pub fn compile_struct(&mut self, r#struct: &Struct) -> Result<(), Error> {
+        let types = r#struct
+            .ast()
+            .fields
+            .iter()
+            .map(|field| self.compile_type(&field.ty))
+            .collect::<Result<Vec<_>, _>>()?;
+
         self.structs.insert(
             r#struct.name().into(),
             StructInfo {
-                r#type: llvm::r#type::r#struct(
-                    self.context,
-                    &r#struct
-                        .ast()
-                        .fields
-                        .iter()
-                        .map(|field| self.compile_type(&field.ty))
-                        .collect::<Result<Vec<_>, _>>()?,
-                    false,
-                ),
-                fields: r#struct
+                r#type: llvm::r#type::r#struct(self.context, &types, false),
+                field_types: types,
+                field_indices: r#struct
                     .ast()
                     .fields
                     .iter()
@@ -386,9 +386,21 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ok_or_else(|| {
                         Error::ValueExpected("struct field access requires struct value".into())
                     })?;
+                let info = self
+                    .structs
+                    .values()
+                    .find(|info| info.r#type == value.r#type())
+                    .ok_or_else(|| Error::StructNotDefined(value.r#type().to_string()))?;
                 let index = match &field.member {
-                    syn::Member::Named(name) => todo!(),
-                    syn::Member::Unnamed(index) => index.index as i32,
+                    syn::Member::Named(name) => {
+                        *info.field_indices.get(&name.to_string()).ok_or_else(|| {
+                            Error::StructFieldNotDefined(
+                                value.r#type().to_string(),
+                                name.to_string(),
+                            )
+                        })?
+                    }
+                    syn::Member::Unnamed(index) => index.index as usize,
                 };
 
                 Some(
@@ -398,9 +410,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
                                 .append_operation(llvm::get_element_ptr(
                                     context,
                                     value,
-                                    DenseI32ArrayAttribute::new(context, &[index]),
+                                    DenseI32ArrayAttribute::new(context, &[index as i32]),
                                     value.r#type(),
-                                    value.r#type().element(index)?,
+                                    info.field_types[index],
                                     location,
                                 ))
                                 .result(0)?
