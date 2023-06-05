@@ -63,7 +63,8 @@ pass_manager.add_pass(pass::conversion::create_scf_to_control_flow());
 pass_manager.add_pass(pass::conversion::create_control_flow_to_llvm());
 pass_manager.add_pass(pass::conversion::create_mem_ref_to_llvm());
 
-assert_eq!(pass_manager.run(&mut module), Ok(()));
+pass_manager.run(&mut module).unwrap();
+
 assert!(module.as_operation().verify());
 
 let engine = ExecutionEngine::new(&module, 2, &[], false);
