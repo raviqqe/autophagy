@@ -344,15 +344,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                                 .into();
                         }
 
-                        let info = self.get_struct_info({
-                            let mut r#type = ptr.r#type();
-
-                            while let Ok(memref) = MemRefType::try_from(r#type) {
-                                r#type = memref.element();
-                            }
-
-                            r#type
-                        })?;
+                        let info =
+                            self.get_struct_info(MemRefType::try_from(ptr.r#type())?.element())?;
 
                         memref::store(
                             builder
