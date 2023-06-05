@@ -1239,7 +1239,7 @@ mod tests {
     }
 
     #[test]
-    fn struct_field_literal() {
+    fn struct_literal() {
         #[allow(dead_code)]
         #[autophagy::quote]
         struct Foo {
