@@ -81,7 +81,6 @@ assert_eq!(
     Ok(())
 );
 
-assert_eq!(argument, 5);
 assert_eq!(result, fibonacci(argument));
 ```
 
