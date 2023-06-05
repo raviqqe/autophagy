@@ -394,8 +394,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 let struct_type = {
                     let mut r#type = value.r#type();
 
-                    while let Ok(r#type) = MemRefType::try_from(r#type) {
-                        r#type = r#type.element()
+                    while let Ok(memref) = MemRefType::try_from(r#type) {
+                        r#type = memref.element()
                     }
 
                     r#type
@@ -403,15 +403,12 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 let info = self
                     .structs
                     .values()
-                    .find(|info| info.r#type == value.r#type())
-                    .ok_or_else(|| Error::StructNotDefined(value.r#type().to_string()))?;
+                    .find(|info| info.r#type == struct_type)
+                    .ok_or_else(|| Error::StructNotDefined(struct_type.to_string()))?;
                 let index = match &field.member {
                     syn::Member::Named(name) => {
                         *info.field_indices.get(&name.to_string()).ok_or_else(|| {
-                            Error::StructFieldNotDefined(
-                                value.r#type().to_string(),
-                                name.to_string(),
-                            )
+                            Error::StructFieldNotDefined(struct_type.to_string(), name.to_string())
                         })?
                     }
                     syn::Member::Unnamed(index) => index.index as usize,
@@ -1144,11 +1141,9 @@ mod tests {
     fn r#while() {
         #[allow(dead_code)]
         #[autophagy::quote]
-        fn foo() -> usize {
+        fn foo() {
             #[allow(while_true)]
             while true {}
-
-            42usize
         }
 
         let context = create_context();
