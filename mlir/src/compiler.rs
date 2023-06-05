@@ -1127,8 +1127,8 @@ mod tests {
 
         #[allow(dead_code)]
         #[autophagy::quote]
-        fn foo(x: Foo) -> i32 {
-            x.bar
+        fn foo(x: &mut Foo) {
+            x.bar = 42;
         }
 
         let context = create_context();
