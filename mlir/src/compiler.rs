@@ -14,7 +14,6 @@ use melior::{
     Context,
 };
 use std::collections::HashMap;
-use syn::Member;
 use train_map::TrainMap;
 
 struct StructInfo<'c> {
@@ -336,7 +335,15 @@ impl<'c, 'm> Compiler<'c, 'm> {
             syn::Expr::Assign(assign) => {
                 builder.append_operation(match assign.left.as_ref() {
                     syn::Expr::Field(field) => {
-                        let ptr = self.compile_ptr(builder, &field.base, variables)?;
+                        let mut ptr = self.compile_ptr(builder, &field.base, variables)?;
+
+                        while MemRefType::try_from(ptr.r#type())?.element().is_mem_ref() {
+                            ptr = builder
+                                .append_operation(memref::load(ptr, &[], location))
+                                .result(0)?
+                                .into();
+                        }
+
                         let info = self.get_struct_info({
                             let mut r#type = ptr.r#type();
 
@@ -346,7 +353,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                             r#type
                         })?;
-                        let index = self.get_struct_field_index(&field.member, info)?;
 
                         memref::store(
                             builder
@@ -356,7 +362,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
                                         .append_operation(memref::load(ptr, &[], location))
                                         .result(0)?
                                         .into(),
-                                    DenseI64ArrayAttribute::new(context, &[index as i64]),
+                                    DenseI64ArrayAttribute::new(
+                                        context,
+                                        &[self.get_struct_field_index(&field.member, info)? as i64],
+                                    ),
                                     self.compile_expression_value(
                                         builder,
                                         &assign.right,
@@ -1187,7 +1196,7 @@ mod tests {
         #[allow(dead_code)]
         #[autophagy::quote]
         fn foo(x: &mut Foo) {
-            x.bar = 42;
+            x.bar = 42i32;
         }
 
         let context = create_test_context();
