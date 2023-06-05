@@ -374,8 +374,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         )
                     }
                     syn::Expr::Path(path) => {
-                        let ptr = self
-                            .compile_variable(&self.convert_path_to_identifier(path)?, variables)?;
+                        let ptr = self.compile_variable(
+                            &self.convert_path_to_identifier(&path.path)?,
+                            variables,
+                        )?;
 
                         memref::store(
                             self.compile_expression_value(builder, &assign.right, variables)?,
