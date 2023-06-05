@@ -333,14 +333,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(match expression {
             syn::Expr::Assign(assign) => {
+                let ptr = self.compile_ptr(&assign.left, variables)?;
                 let value = self.compile_expression_value(builder, &assign.right, variables)?;
 
-                builder.append_operation(memref::store(
-                    value,
-                    self.compile_ptr(&assign.left, variables)?,
-                    &[],
-                    location,
-                ));
+                builder.append_operation(memref::store(value, ptr, &[], location));
 
                 Some(value)
             }
