@@ -333,6 +333,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(match expression {
             syn::Expr::Assign(assign) => {
+                // TODO Support a `*` pointer dereference.
+                // TODO Support recursive LHS dereference.
                 builder.append_operation(match assign.left.as_ref() {
                     syn::Expr::Field(field) => {
                         let mut ptr = self.compile_ptr(builder, &field.base, variables)?;
@@ -374,8 +376,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         )
                     }
                     syn::Expr::Path(path) => {
-                        let ptr = self
-                            .compile_variable(&self.convert_path_to_identifier(path)?, variables)?;
+                        let ptr = self.compile_variable(
+                            &self.convert_path_to_identifier(&path.path)?,
+                            variables,
+                        )?;
 
                         memref::store(
                             self.compile_expression_value(builder, &assign.right, variables)?,
@@ -540,6 +544,34 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 self.compile_expression(builder, &parenthesis.expr, variables)?
             }
             syn::Expr::Path(path) => Some(self.compile_path(builder, path, variables)?),
+            syn::Expr::Struct(r#struct) => {
+                let name = self.convert_path_to_identifier(&r#struct.path)?;
+                let info = self
+                    .structs
+                    .get(&name)
+                    .ok_or(Error::StructNotDefined(name))?;
+                let mut value = builder
+                    .append_operation(llvm::undef(info.r#type, location))
+                    .result(0)?
+                    .into();
+
+                for field in &r#struct.fields {
+                    let index = self.get_struct_field_index(&field.member, info)?;
+
+                    value = builder
+                        .append_operation(llvm::insert_value(
+                            context,
+                            value,
+                            DenseI64ArrayAttribute::new(context, &[index as i64]),
+                            self.compile_expression_value(builder, &field.expr, variables)?,
+                            location,
+                        ))
+                        .result(0)?
+                        .into();
+                }
+
+                Some(value)
+            }
             syn::Expr::Unary(operation) => self
                 .compile_unary_operation(builder, operation, variables)?
                 .result(0)
@@ -581,7 +613,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
     ) -> Result<Value<'c, 'a>, Error> {
         Ok(match expression {
             syn::Expr::Path(path) => {
-                self.compile_variable(&self.convert_path_to_identifier(path)?, variables)?
+                self.compile_variable(&self.convert_path_to_identifier(&path.path)?, variables)?
             }
             _ => self.compile_expression_value(builder, expression, variables)?,
         })
@@ -742,7 +774,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         variables: &TrainMap<String, Value<'c, 'a>>,
     ) -> Result<Value<'c, 'a>, Error> {
         let context = self.context;
-        let name = self.convert_path_to_identifier(path)?;
+        let name = self.convert_path_to_identifier(&path.path)?;
 
         if let Some(&r#type) = self.functions.get(&name) {
             Ok(builder
@@ -766,8 +798,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
         }
     }
 
-    fn convert_path_to_identifier(&self, path: &syn::ExprPath) -> Result<String, Error> {
-        if let Some(identifier) = path.path.get_ident() {
+    fn convert_path_to_identifier(&self, path: &syn::Path) -> Result<String, Error> {
+        if let Some(identifier) = path.get_ident() {
             Ok(identifier.to_string())
         } else {
             Err(Error::NotSupported("non-identifier path"))
@@ -1192,6 +1224,36 @@ mod tests {
         #[autophagy::quote]
         fn foo(x: &mut Foo) {
             x.bar = 42i32;
+        }
+
+        let context = create_test_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn struct_literal() {
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+            baz: f64,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo() -> Foo {
+            Foo {
+                bar: 42i32,
+                baz: 1.5f64,
+            }
         }
 
         let context = create_test_context();
