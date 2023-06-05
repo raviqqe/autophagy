@@ -333,12 +333,35 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(match expression {
             syn::Expr::Assign(assign) => {
-                let ptr = self.compile_ptr(builder, &assign.left, variables)?;
-                let value = self.compile_expression_value(builder, &assign.right, variables)?;
+                let compile_value =
+                    || self.compile_expression_value(builder, &assign.right, variables);
 
-                builder.append_operation(memref::store(value, ptr, &[], location));
+                builder.append_operation(match assign.left.as_ref() {
+                    syn::Expr::Field(field) => {
+                        let ptr = self.compile_ptr(builder, &field.base, variables)?;
 
-                Some(value)
+                        builder
+                            .append_operation(llvm::get_element_ptr(
+                                context,
+                                self.compile_ptr(builder, &field.base, variables)?,
+                                DenseI32ArrayAttribute::new(context, &[index as i32]),
+                                element_type,
+                                result_type,
+                                location,
+                            ))
+                            .result(0)?
+                            .into()
+                    }
+                    syn::Expr::Path(path) => {
+                        let ptr = self
+                            .compile_variable(&self.convert_path_to_identifier(path)?, variables)?;
+
+                        memref::store(compile_value()?, ptr, &[], location)
+                    }
+                    _ => todo!("{:?}", expression),
+                });
+
+                None
             }
             syn::Expr::Binary(operation) => Some(
                 self.compile_binary_operation(builder, operation, variables)?
@@ -545,27 +568,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         let context = self.context;
         let location = Location::unknown(context);
 
-        Ok(match expression {
-            syn::Expr::Field(field) => {
-                let index = 0;
-
-                builder
-                    .append_operation(llvm::get_element_ptr(
-                        context,
-                        self.compile_ptr(builder, &field.base, variables)?,
-                        DenseI32ArrayAttribute::new(context, &[index as i32]),
-                        element_type,
-                        result_type,
-                        location,
-                    ))
-                    .result(0)?
-                    .into()
-            }
-            syn::Expr::Path(path) => {
-                self.compile_variable(&self.convert_path_to_identifier(path)?, variables)?
-            }
-            _ => todo!("{:?}", expression),
-        })
+        Ok()
     }
 
     fn compile_unary_operation<'a>(
