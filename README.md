@@ -125,4 +125,4 @@ assert_eq!(result, fibonacci(argument));
 
 ## License
 
-[The Unlicense](UNLICENSE)
+Dual-licensed under [MIT](https://github.com/raviqqe/autophagy/blob/main/LICENSE-MIT) and [Apache 2.0](https://github.com/raviqqe/autophagy/blob/main/LICENSE-APACHE).
