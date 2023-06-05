@@ -559,14 +559,14 @@ impl<'c, 'm> Compiler<'c, 'm> {
                             context,
                             value,
                             DenseI64ArrayAttribute::new(context, &[index as i64]),
-                            self.compile_expression_value(builder, field, variables),
+                            self.compile_expression_value(builder, &field.expr, variables)?,
                             location,
                         ))
                         .result(0)?
                         .into();
                 }
 
-                Some(builder.append_operation())
+                Some(value)
             }
             syn::Expr::Unary(operation) => self
                 .compile_unary_operation(builder, operation, variables)?
