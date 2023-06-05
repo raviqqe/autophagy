@@ -116,6 +116,7 @@ assert_eq!(result, fibonacci(argument));
 - [x] References
 - [x] Struct
 - [ ] Array
+- [ ] Atomic
 
 ### Literals
 
