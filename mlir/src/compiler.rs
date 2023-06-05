@@ -1153,7 +1153,7 @@ mod tests {
             x.bar = 42;
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
