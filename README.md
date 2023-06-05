@@ -121,7 +121,7 @@ assert_eq!(result, fibonacci(argument));
 
 ### Others
 
-- [ ] Type inference
+- [ ] HM type inference
 
 ## License
 
