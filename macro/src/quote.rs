@@ -55,7 +55,7 @@ fn generate_struct(
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| ident.to_string());
     let visibility = &r#struct.vis;
-    let quote_name = Ident::new(&(ident_string + "_struct"), ident.span());
+    let quote_name = Ident::new(&(ident_string.to_lowercase() + "_struct"), ident.span());
     let name_string = Expr::Lit(ExprLit {
         attrs: Vec::new(),
         lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
