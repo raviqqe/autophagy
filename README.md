@@ -13,6 +13,7 @@ Isomorphic Rust.
 - [x] `=` assignment
   - [x] Variables
   - [x] `struct` fields
+  - [ ] Dereferenced pointer
 - [x] `while` statement
 - [x] `loop` statement
 - [x] `if` expression
