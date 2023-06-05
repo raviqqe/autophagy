@@ -1240,6 +1240,7 @@ mod tests {
 
     #[test]
     fn struct_field_literal() {
+        #[allow(dead_code)]
         #[autophagy::quote]
         struct Foo {
             bar: i32,
@@ -1251,7 +1252,7 @@ mod tests {
         fn foo() -> Foo {
             Foo {
                 bar: 42i32,
-                baz: 3.14f64,
+                baz: 1.5f64,
             }
         }
 
