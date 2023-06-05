@@ -20,7 +20,6 @@ use melior::{
     Context, ExecutionEngine,
 };
 
-#[allow(clippy::assign_op_pattern)]
 #[autophagy::quote]
 fn fibonacci(x: i32) -> i32 {
     if x <= 0i32 {
