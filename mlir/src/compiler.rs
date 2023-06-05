@@ -411,7 +411,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
             }
             syn::Expr::Call(call) => {
                 let function = self.compile_expression_value(builder, &call.func, variables)?;
-                let r#type = FunctionType::try_from(function.r#type())?;
 
                 builder
                     .append_operation(func::call_indirect(
@@ -423,7 +422,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
                                 self.compile_expression_value(builder, argument, variables)
                             })
                             .collect::<Result<Vec<_>, _>>()?,
-                        &r#type.result(0).into_iter().collect::<Vec<_>>(),
+                        &FunctionType::try_from(function.r#type())?
+                            .result(0)
+                            .into_iter()
+                            .collect::<Vec<_>>(),
                         location,
                     ))
                     .result(0)
