@@ -6,7 +6,7 @@ Isomorphic Rust.
 
 ### Syntax
 
-- [x] Arithmetic/binary/boolean operators
+- [x] Arithmetic/bit/boolean operators
 - [x] Dereference operator
 - [x] Function calls
 - [x] `let` binding
