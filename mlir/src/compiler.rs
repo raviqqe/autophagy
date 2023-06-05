@@ -1,26 +1,32 @@
 use crate::Error;
-use autophagy::Fn;
-
+use autophagy::{Fn, Struct};
 use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
-            FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute, StringAttribute,
-            TypeAttribute,
+            DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute,
+            StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
-        ValueLike,
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, TypeLike,
+        Value, ValueLike,
     },
     Context,
 };
 use std::collections::HashMap;
 use train_map::TrainMap;
 
+struct StructInfo<'c> {
+    r#type: Type<'c>,
+    field_types: Vec<Type<'c>>,
+    field_indices: HashMap<String, usize>,
+}
+
 pub struct Compiler<'c, 'm> {
     context: &'c Context,
     module: &'m Module<'c>,
     functions: HashMap<String, FunctionType<'c>>,
+    structs: HashMap<String, StructInfo<'c>>,
 }
 
 impl<'c, 'm> Compiler<'c, 'm> {
@@ -29,10 +35,39 @@ impl<'c, 'm> Compiler<'c, 'm> {
             context,
             module,
             functions: Default::default(),
+            structs: Default::default(),
         }
     }
 
-    pub fn compile(&mut self, r#fn: &Fn) -> Result<(), Error> {
+    pub fn compile_struct(&mut self, r#struct: &Struct) -> Result<(), Error> {
+        let types = r#struct
+            .ast()
+            .fields
+            .iter()
+            .map(|field| self.compile_type(&field.ty))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.structs.insert(
+            r#struct.name().into(),
+            StructInfo {
+                r#type: llvm::r#type::r#struct(self.context, &types, false),
+                field_types: types,
+                field_indices: r#struct
+                    .ast()
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(index, field)| {
+                        field.ident.as_ref().map(|ident| (ident.to_string(), index))
+                    })
+                    .collect(),
+            },
+        );
+
+        Ok(())
+    }
+
+    pub fn compile_fn(&mut self, r#fn: &Fn) -> Result<(), Error> {
         let function = r#fn.ast();
         let context = self.context;
         let location = Location::unknown(context);
@@ -120,7 +155,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(match r#type {
             syn::Type::Path(path) => {
                 if let Some(identifier) = path.path.get_ident() {
-                    self.compile_primitive_type(&identifier.to_string())
+                    self.compile_primitive_type(&identifier.to_string())?
                 } else {
                     return Err(Error::NotSupported("custom type"));
                 }
@@ -132,10 +167,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
         })
     }
 
-    fn compile_primitive_type(&self, name: &str) -> Type<'c> {
+    fn compile_primitive_type(&self, name: &str) -> Result<Type<'c>, Error> {
         let context = self.context;
 
-        match name {
+        Ok(match name {
             "bool" => IntegerType::new(context, 1).into(),
             "f32" => Type::float32(context),
             "f64" => Type::float64(context),
@@ -144,8 +179,13 @@ impl<'c, 'm> Compiler<'c, 'm> {
             "i16" | "u16" => IntegerType::new(context, 16).into(),
             "i32" | "u32" => IntegerType::new(context, 32).into(),
             "i64" | "u64" => IntegerType::new(context, 64).into(),
-            _ => todo!(),
-        }
+            name => {
+                self.structs
+                    .get(name)
+                    .ok_or_else(|| Error::TypeNotDefined(name.into()))?
+                    .r#type
+            }
+        })
     }
 
     fn compile_block(
@@ -345,6 +385,47 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .map(Into::into)
                     .ok()
             }
+            syn::Expr::Field(field) => {
+                let value = self
+                    .compile_expression(builder, &field.base, variables)?
+                    .ok_or_else(|| {
+                        Error::ValueExpected("struct field access requires struct value".into())
+                    })?;
+
+                if value.r#type().is_mem_ref() {
+                    return Err(Error::NotSupported("struct reference field access"));
+                }
+
+                let info = self
+                    .structs
+                    .values()
+                    .find(|info| info.r#type == value.r#type())
+                    .ok_or_else(|| Error::StructNotDefined(value.r#type().to_string()))?;
+                let index = match &field.member {
+                    syn::Member::Named(name) => {
+                        *info.field_indices.get(&name.to_string()).ok_or_else(|| {
+                            Error::StructFieldNotDefined(
+                                value.r#type().to_string(),
+                                name.to_string(),
+                            )
+                        })?
+                    }
+                    syn::Member::Unnamed(index) => index.index as usize,
+                };
+
+                Some(
+                    builder
+                        .append_operation(llvm::extract_value(
+                            context,
+                            value,
+                            DenseI64ArrayAttribute::new(context, &[index as i64]),
+                            info.field_types[index],
+                            location,
+                        ))
+                        .result(0)?
+                        .into(),
+                )
+            }
             syn::Expr::If(r#if) => {
                 let condition = self.compile_expression_value(builder, &r#if.cond, variables)?;
                 let (then_region, then_type) =
@@ -418,6 +499,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 ));
 
                 None
+            }
+            syn::Expr::Paren(parenthesis) => {
+                self.compile_expression(builder, &parenthesis.expr, variables)?
             }
             syn::Expr::Path(path) => Some(self.compile_path(builder, path, variables)?),
             syn::Expr::Unary(operation) => self
@@ -588,7 +672,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     integer.base10_parse::<i64>()?,
                     match integer.suffix() {
                         "" => Type::index(context),
-                        name => self.compile_primitive_type(name),
+                        name => self.compile_primitive_type(name)?,
                     },
                 )
                 .into(),
@@ -601,7 +685,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     float.base10_parse::<f64>()?,
                     match float.suffix() {
                         "" => Type::index(context),
-                        name => self.compile_primitive_type(name),
+                        name => self.compile_primitive_type(name)?,
                     },
                 )
                 .into(),
@@ -706,7 +790,7 @@ mod tests {
     }
 
     fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
-        Compiler::new(context, module).compile(r#fn)?;
+        Compiler::new(context, module).compile_fn(r#fn)?;
 
         Ok(())
     }
@@ -898,8 +982,8 @@ mod tests {
 
         let mut compiler = Compiler::new(&context, &module);
 
-        compiler.compile(&foo_fn()).unwrap();
-        compiler.compile(&bar_fn()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+        compiler.compile_fn(&bar_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
@@ -979,6 +1063,56 @@ mod tests {
         let module = Module::new(location);
 
         compile(&context, &module, &foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn struct_field() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: Foo) -> i32 {
+            x.bar
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn struct_reference_field() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: &Foo) -> i32 {
+            (*x).bar
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
