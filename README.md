@@ -2,8 +2,6 @@
 
 Isomorphic Rust.
 
-We do not need to validate types as the `instruction` macro keeps the original function definitions.
-
 ## Supported features
 
 ### Syntax
@@ -20,6 +18,7 @@ We do not need to validate types as the `instruction` macro keeps the original f
 - [x] `if` expression
 - [x] `struct` field access
 - [ ] Operator assignment (e.g. `+=`)
+- [ ] `impl` block and `self` receiver
 
 ### Types
 
@@ -37,6 +36,10 @@ We do not need to validate types as the `instruction` macro keeps the original f
 - [x] Floating-point numbers
 - [x] Struct
 - [ ] Array
+
+### Others
+
+- [ ] Type inference
 
 ## License
 
