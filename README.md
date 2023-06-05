@@ -2,7 +2,7 @@
 
 [![GitHub Action](https://img.shields.io/github/actions/workflow/status/raviqqe/autophagy/test.yaml?branch=main&style=flat-square)](https://github.com/raviqqe/autophagy/actions?query=workflow%3Atest)
 [![Crate](https://img.shields.io/crates/v/autophagy.svg?style=flat-square)](https://crates.io/crates/autophagy)
-[![License](https://img.shields.io/github/license/raviqqe/autophagy.svg?style=flat-square)](https://github.com/raviqqe/autophagy/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/raviqqe/autophagy.svg?style=flat-square)](https://github.com/raviqqe/autophagy/blob/main/LICENSE-APACHE)
 
 Yet another AOT compiler for Rust to realize true isomorphism.
 
