@@ -1,6 +1,12 @@
 # Autophagy
 
-Isomorphic Rust.
+Yet another AOT compiler for Rust to realize true isomorphism.
+
+## Background
+
+Existing Rust interpreters are mostly wrappers around cargo build or rustc. This incurs extra overhead, such as spawning processes and accessing the file system. Depending on the use case, this approach may not be suitable for compiling and running Rust code in Rust programs.
+
+This crate aims to provide fully in-memory compilation of Rust code into assembly and its execution. This will empower software that requires dynamic code generation.
 
 ## Examples
 
@@ -59,7 +65,8 @@ pass_manager.add_pass(pass::conversion::create_scf_to_control_flow());
 pass_manager.add_pass(pass::conversion::create_control_flow_to_llvm());
 pass_manager.add_pass(pass::conversion::create_mem_ref_to_llvm());
 
-assert_eq!(pass_manager.run(&mut module), Ok(()));
+pass_manager.run(&mut module).unwrap();
+
 assert!(module.as_operation().verify());
 
 let engine = ExecutionEngine::new(&module, 2, &[], false);
