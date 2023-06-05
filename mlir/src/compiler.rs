@@ -8,8 +8,8 @@ use melior::{
             IntegerAttribute, StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, TypeLike,
-        Value, ValueLike,
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, ShapedTypeLike, Type,
+        TypeLike, Value, ValueLike,
     },
     Context,
 };
@@ -391,6 +391,15 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ok_or_else(|| {
                         Error::ValueExpected("struct field access requires struct value".into())
                     })?;
+                let struct_type = {
+                    let mut r#type = value.r#type();
+
+                    while let Ok(r#type) = MemRefType::try_from(r#type) {
+                        r#type = r#type.element()
+                    }
+
+                    r#type
+                };
                 let info = self
                     .structs
                     .values()
