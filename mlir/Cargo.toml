@@ -1,7 +1,11 @@
 [package]
 name = "autophagy-mlir"
+description = "MLIR backend for Autophagy"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/raviqqe/autophagy"
+documentation = "https://raviqqe.github.io/autophagy/autophagy_mlir/"
 
 [dependencies]
 autophagy = { version = "0.1", path = "../autophagy" }

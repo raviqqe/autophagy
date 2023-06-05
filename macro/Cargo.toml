@@ -1,7 +1,11 @@
 [package]
 name = "autophagy-macro"
+description = "Internal macros for Autophagy"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/raviqqe/autophagy"
+documentation = "https://raviqqe.github.io/autophagy/autophagy_macro/"
 
 [lib]
 proc-macro = true
