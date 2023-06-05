@@ -11,7 +11,7 @@ pub fn generate(attributes: &AttributeList, item: &Item) -> Result<TokenStream, 
     match item {
         Item::Fn(function) => generate_function(attributes, function),
         Item::Struct(r#struct) => generate_struct(attributes, r#struct),
-        _ => Err("Only functions and structs can be quoted".into()),
+        _ => Err("only functions and structs can be quoted".into()),
     }
 }
 
