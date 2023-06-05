@@ -8,8 +8,8 @@ use melior::{
             StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, TypeLike,
-        Value, ValueLike,
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, ShapedTypeLike, Type,
+        TypeLike, Value, ValueLike,
     },
     Context,
 };
@@ -333,16 +333,61 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(match expression {
             syn::Expr::Assign(assign) => {
-                let value = self.compile_expression_value(builder, &assign.right, variables)?;
+                builder.append_operation(match assign.left.as_ref() {
+                    syn::Expr::Field(field) => {
+                        let mut ptr = self.compile_ptr(builder, &field.base, variables)?;
 
-                builder.append_operation(memref::store(
-                    value,
-                    self.compile_ptr(&assign.left, variables)?,
-                    &[],
-                    location,
-                ));
+                        while MemRefType::try_from(ptr.r#type())?.element().is_mem_ref() {
+                            ptr = builder
+                                .append_operation(memref::load(ptr, &[], location))
+                                .result(0)?
+                                .into();
+                        }
 
-                Some(value)
+                        let info =
+                            self.get_struct_info(MemRefType::try_from(ptr.r#type())?.element())?;
+
+                        memref::store(
+                            builder
+                                .append_operation(llvm::insert_value(
+                                    context,
+                                    builder
+                                        .append_operation(memref::load(ptr, &[], location))
+                                        .result(0)?
+                                        .into(),
+                                    DenseI64ArrayAttribute::new(
+                                        context,
+                                        &[self.get_struct_field_index(&field.member, info)? as i64],
+                                    ),
+                                    self.compile_expression_value(
+                                        builder,
+                                        &assign.right,
+                                        variables,
+                                    )?,
+                                    location,
+                                ))
+                                .result(0)?
+                                .into(),
+                            ptr,
+                            &[],
+                            location,
+                        )
+                    }
+                    syn::Expr::Path(path) => {
+                        let ptr = self
+                            .compile_variable(&self.convert_path_to_identifier(path)?, variables)?;
+
+                        memref::store(
+                            self.compile_expression_value(builder, &assign.right, variables)?,
+                            ptr,
+                            &[],
+                            location,
+                        )
+                    }
+                    _ => todo!("{:?}", expression),
+                });
+
+                None
             }
             syn::Expr::Binary(operation) => Some(
                 self.compile_binary_operation(builder, operation, variables)?
@@ -401,22 +446,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         .into();
                 }
 
-                let info = self
-                    .structs
-                    .values()
-                    .find(|info| info.r#type == value.r#type())
-                    .ok_or_else(|| Error::StructNotDefined(value.r#type().to_string()))?;
-                let index = match &field.member {
-                    syn::Member::Named(name) => {
-                        *info.field_indices.get(&name.to_string()).ok_or_else(|| {
-                            Error::StructFieldNotDefined(
-                                value.r#type().to_string(),
-                                name.to_string(),
-                            )
-                        })?
-                    }
-                    syn::Member::Unnamed(index) => index.index as usize,
-                };
+                let info = self.get_struct_info(value.r#type())?;
+                let index = self.get_struct_field_index(&field.member, info)?;
 
                 Some(
                     builder
@@ -544,6 +575,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
     fn compile_ptr<'a>(
         &self,
+        builder: &'a Block<'c>,
         expression: &syn::Expr,
         variables: &mut TrainMap<String, Value<'c, 'a>>,
     ) -> Result<Value<'c, 'a>, Error> {
@@ -551,7 +583,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
             syn::Expr::Path(path) => {
                 self.compile_variable(&self.convert_path_to_identifier(path)?, variables)?
             }
-            _ => todo!("{:?}", expression),
+            _ => self.compile_expression_value(builder, expression, variables)?,
         })
     }
 
@@ -764,6 +796,28 @@ impl<'c, 'm> Compiler<'c, 'm> {
             ))
             .result(0)?
             .into())
+    }
+
+    fn get_struct_field_index(
+        &self,
+        member: &syn::Member,
+        info: &StructInfo,
+    ) -> Result<usize, Error> {
+        Ok(match member {
+            syn::Member::Named(name) => {
+                *info.field_indices.get(&name.to_string()).ok_or_else(|| {
+                    Error::StructFieldNotDefined(info.r#type.to_string(), name.to_string())
+                })?
+            }
+            syn::Member::Unnamed(index) => index.index as usize,
+        })
+    }
+
+    fn get_struct_info(&self, r#type: Type<'c>) -> Result<&StructInfo<'c>, Error> {
+        self.structs
+            .values()
+            .find(|info| info.r#type == r#type)
+            .ok_or_else(|| Error::StructNotDefined(r#type.to_string()))
     }
 }
 
@@ -1113,6 +1167,31 @@ mod tests {
         #[autophagy::quote]
         fn foo(x: &&Foo) -> i32 {
             x.bar
+        }
+
+        let context = create_test_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn struct_field_assignment() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: &mut Foo) {
+            x.bar = 42i32;
         }
 
         let context = create_test_context();
