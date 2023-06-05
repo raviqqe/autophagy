@@ -6,12 +6,12 @@ use syn::ItemFn;
 pub struct Fn {
     name: &'static str,
     #[derivative(Debug = "ignore")]
-    r#fn: ItemFn,
+    ast: ItemFn,
 }
 
 impl Fn {
-    pub const fn new(name: &'static str, r#fn: ItemFn) -> Self {
-        Self { name, r#fn }
+    pub const fn new(name: &'static str, ast: ItemFn) -> Self {
+        Self { name, ast }
     }
 
     pub fn name(&self) -> &str {
@@ -19,6 +19,6 @@ impl Fn {
     }
 
     pub fn ast(&self) -> &ItemFn {
-        &self.r#fn
+        &self.ast
     }
 }
