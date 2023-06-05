@@ -4,8 +4,8 @@ use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
-            DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute,
-            StringAttribute, TypeAttribute,
+            DenseI32ArrayAttribute, DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute,
+            IntegerAttribute, StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, ShapedTypeLike, Type,
@@ -546,13 +546,24 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .structs
                     .get(&name)
                     .ok_or_else(|| Error::StructNotDefined(name))?;
-                let value = builder
+                let mut value = builder
                     .append_operation(llvm::undef(info.r#type, location))
                     .result(0)?
                     .into();
 
-                for (index, field) in info.field_type.iter().enumerate() {
-                    foo = foo;
+                for field in &r#struct.fields {
+                    let index = self.get_struct_field_index(&field.member, info)?;
+
+                    value = builder
+                        .append_operation(llvm::insert_value(
+                            context,
+                            value,
+                            DenseI64ArrayAttribute::new(context, &[index as i64]),
+                            self.compile_expression_value(builder, field, variables),
+                            location,
+                        ))
+                        .result(0)?
+                        .into();
                 }
 
                 Some(builder.append_operation())
