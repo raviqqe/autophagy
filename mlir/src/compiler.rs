@@ -1116,8 +1116,7 @@ mod tests {
         #[allow(dead_code)]
         #[autophagy::quote]
         fn foo(x: &Foo) -> i32 {
-            #[allow(clippy::explicit_auto_deref)]
-            (*x).bar
+            x.bar
         }
 
         let context = create_context();
