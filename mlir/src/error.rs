@@ -12,6 +12,7 @@ pub enum Error {
     Syn(syn::Error),
     StructFieldNotDefined(String, String),
     StructNotDefined(String),
+    TypeNotDefined(String),
     ValueExpected(String),
     VariableNotDefined(String),
 }
@@ -36,6 +37,9 @@ impl Display for Error {
             }
             Self::StructNotDefined(message) => {
                 write!(formatter, "struct type not defined: {}", message)
+            }
+            Self::TypeNotDefined(message) => {
+                write!(formatter, "type not defined: {}", message)
             }
             Self::ValueExpected(message) => write!(formatter, "value expected: {}", message),
             Self::VariableNotDefined(name) => {

@@ -155,7 +155,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(match r#type {
             syn::Type::Path(path) => {
                 if let Some(identifier) = path.path.get_ident() {
-                    self.compile_primitive_type(&identifier.to_string())
+                    self.compile_primitive_type(&identifier.to_string())?
                 } else {
                     return Err(Error::NotSupported("custom type"));
                 }
@@ -167,10 +167,10 @@ impl<'c, 'm> Compiler<'c, 'm> {
         })
     }
 
-    fn compile_primitive_type(&self, name: &str) -> Type<'c> {
+    fn compile_primitive_type(&self, name: &str) -> Result<Type<'c>, Error> {
         let context = self.context;
 
-        match name {
+        Ok(match name {
             "bool" => IntegerType::new(context, 1).into(),
             "f32" => Type::float32(context),
             "f64" => Type::float64(context),
@@ -179,8 +179,13 @@ impl<'c, 'm> Compiler<'c, 'm> {
             "i16" | "u16" => IntegerType::new(context, 16).into(),
             "i32" | "u32" => IntegerType::new(context, 32).into(),
             "i64" | "u64" => IntegerType::new(context, 64).into(),
-            _ => todo!(),
-        }
+            name => {
+                self.structs
+                    .get(name)
+                    .ok_or_else(|| Error::TypeNotDefined(name.into()))?
+                    .r#type
+            }
+        })
     }
 
     fn compile_block(
@@ -667,7 +672,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     integer.base10_parse::<i64>()?,
                     match integer.suffix() {
                         "" => Type::index(context),
-                        name => self.compile_primitive_type(name),
+                        name => self.compile_primitive_type(name)?,
                     },
                 )
                 .into(),
@@ -680,7 +685,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     float.base10_parse::<f64>()?,
                     match float.suffix() {
                         "" => Type::index(context),
-                        name => self.compile_primitive_type(name),
+                        name => self.compile_primitive_type(name)?,
                     },
                 )
                 .into(),
