@@ -4,12 +4,12 @@ use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
-            DenseI32ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute,
-            StringAttribute, TypeAttribute,
+            DenseI32ArrayAttribute, DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute,
+            IntegerAttribute, StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
-        ValueLike,
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, TypeLike,
+        Value, ValueLike,
     },
     Context,
 };
@@ -408,7 +408,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     syn::Member::Unnamed(index) => index.index as usize,
                 };
 
-                Some(
+                Some(if value.r#type().is_mem_ref() {
                     builder
                         .append_operation(memref::load(
                             builder
@@ -426,8 +426,19 @@ impl<'c, 'm> Compiler<'c, 'm> {
                             location,
                         ))
                         .result(0)?
-                        .into(),
-                )
+                        .into()
+                } else {
+                    builder
+                        .append_operation(llvm::extract_value(
+                            context,
+                            value,
+                            DenseI64ArrayAttribute::new(context, &[index as i64]),
+                            info.field_types[index],
+                            location,
+                        ))
+                        .result(0)?
+                        .into()
+                })
             }
             syn::Expr::If(r#if) => {
                 let condition = self.compile_expression_value(builder, &r#if.cond, variables)?;
@@ -1071,12 +1082,12 @@ mod tests {
     fn struct_field() {
         #[autophagy::quote]
         struct Foo {
-            bar: usize,
+            bar: i32,
         }
 
         #[allow(dead_code)]
         #[autophagy::quote]
-        fn foo(x: Foo) -> usize {
+        fn foo(x: Foo) -> i32 {
             x.bar
         }
 
