@@ -382,14 +382,17 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ok()
             }
             syn::Expr::Field(field) => {
-                let value = self
+                let mut value = self
                     .compile_expression(builder, &field.base, variables)?
                     .ok_or_else(|| {
                         Error::ValueExpected("struct field access requires struct value".into())
                     })?;
 
-                if value.r#type().is_mem_ref() {
-                    return Err(Error::NotSupported("struct reference field access"));
+                while value.r#type().is_mem_ref() {
+                    value = builder
+                        .append_operation(memref::load(value, &[], location))
+                        .result(0)?
+                        .into();
                 }
 
                 let info = self
@@ -780,29 +783,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test::create_test_context;
     use autophagy::math;
-    use melior::{
-        dialect::DialectRegistry,
-        ir::Location,
-        utility::{register_all_dialects, register_all_llvm_translations},
-        Context,
-    };
-
-    fn create_context() -> Context {
-        let registry = DialectRegistry::new();
-        register_all_dialects(&registry);
-
-        let context = Context::new();
-        context.attach_diagnostic_handler(|diagnostic| {
-            println!("{}", diagnostic);
-            true
-        });
-        context.append_dialect_registry(&registry);
-        context.load_all_available_dialects();
-        register_all_llvm_translations(&context);
-
-        context
-    }
+    use melior::{ir::Location, Context};
 
     fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
         Compiler::new(context, module).compile_fn(r#fn)?;
@@ -812,7 +795,7 @@ mod tests {
 
     #[test]
     fn add() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -824,7 +807,7 @@ mod tests {
 
     #[test]
     fn sub() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -836,7 +819,7 @@ mod tests {
 
     #[test]
     fn mul() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -848,7 +831,7 @@ mod tests {
 
     #[test]
     fn div() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -860,7 +843,7 @@ mod tests {
 
     #[test]
     fn rem() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -872,7 +855,7 @@ mod tests {
 
     #[test]
     fn neg() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -884,7 +867,7 @@ mod tests {
 
     #[test]
     fn not() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -896,7 +879,7 @@ mod tests {
 
     #[test]
     fn and() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -908,7 +891,7 @@ mod tests {
 
     #[test]
     fn or() {
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -929,7 +912,7 @@ mod tests {
                 true
             }
 
-            let context = create_context();
+            let context = create_test_context();
 
             let location = Location::unknown(&context);
             let module = Module::new(location);
@@ -947,7 +930,7 @@ mod tests {
                 42f32
             }
 
-            let context = create_context();
+            let context = create_test_context();
 
             let location = Location::unknown(&context);
             let module = Module::new(location);
@@ -965,7 +948,7 @@ mod tests {
                 42f64
             }
 
-            let context = create_context();
+            let context = create_test_context();
 
             let location = Location::unknown(&context);
             let module = Module::new(location);
@@ -990,7 +973,7 @@ mod tests {
             foo(1, 2)
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1011,7 +994,7 @@ mod tests {
             *x
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1033,7 +1016,7 @@ mod tests {
             }
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1053,7 +1036,7 @@ mod tests {
             x
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1072,7 +1055,7 @@ mod tests {
             loop {}
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1095,7 +1078,7 @@ mod tests {
             x.bar
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1108,7 +1091,7 @@ mod tests {
     }
 
     #[test]
-    fn struct_reference_field() {
+    fn struct_field_dereference() {
         #[autophagy::quote]
         struct Foo {
             bar: i32,
@@ -1117,11 +1100,35 @@ mod tests {
         #[allow(dead_code)]
         #[autophagy::quote]
         fn foo(x: &Foo) -> i32 {
-            #[allow(clippy::explicit_auto_deref)]
-            (*x).bar
+            x.bar
         }
 
-        let context = create_context();
+        let context = create_test_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn struct_field_double_dereference() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: &&Foo) -> i32 {
+            x.bar
+        }
+
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
@@ -1162,14 +1169,12 @@ mod tests {
     fn r#while() {
         #[allow(dead_code)]
         #[autophagy::quote]
-        fn foo() -> usize {
+        fn foo() {
             #[allow(while_true)]
             while true {}
-
-            42usize
         }
 
-        let context = create_context();
+        let context = create_test_context();
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
