@@ -6,6 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/raviqqe/autophagy"
 documentation = "https://raviqqe.github.io/autophagy/autophagy_llvm/"
+readme = "../README.md"
 
 [dependencies]
 autophagy = { version = "0.1", path = "../autophagy" }
