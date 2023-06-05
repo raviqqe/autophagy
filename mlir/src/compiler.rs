@@ -4,12 +4,12 @@ use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
-            DenseI32ArrayAttribute, DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute,
-            IntegerAttribute, StringAttribute, TypeAttribute,
+            DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute,
+            StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, ShapedTypeLike, Type,
-        TypeLike, Value, ValueLike,
+        Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, TypeLike,
+        Value, ValueLike,
     },
     Context,
 };
@@ -386,54 +386,37 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ok()
             }
             syn::Expr::Field(field) => {
-                let value = self
+                let mut value = self
                     .compile_expression(builder, &field.base, variables)?
                     .ok_or_else(|| {
                         Error::ValueExpected("struct field access requires struct value".into())
                     })?;
-                let struct_type = {
-                    let mut r#type = value.r#type();
 
-                    while let Ok(memref) = MemRefType::try_from(r#type) {
-                        r#type = memref.element()
-                    }
+                while value.r#type().is_mem_ref() {
+                    value = builder
+                        .append_operation(memref::load(value, &[], location))
+                        .result(0)?
+                        .into();
+                }
 
-                    r#type
-                };
                 let info = self
                     .structs
                     .values()
-                    .find(|info| info.r#type == struct_type)
-                    .ok_or_else(|| Error::StructNotDefined(struct_type.to_string()))?;
+                    .find(|info| info.r#type == value.r#type())
+                    .ok_or_else(|| Error::StructNotDefined(value.r#type().to_string()))?;
                 let index = match &field.member {
                     syn::Member::Named(name) => {
                         *info.field_indices.get(&name.to_string()).ok_or_else(|| {
-                            Error::StructFieldNotDefined(struct_type.to_string(), name.to_string())
+                            Error::StructFieldNotDefined(
+                                value.r#type().to_string(),
+                                name.to_string(),
+                            )
                         })?
                     }
                     syn::Member::Unnamed(index) => index.index as usize,
                 };
 
-                Some(if value.r#type().is_mem_ref() {
-                    builder
-                        .append_operation(memref::load(
-                            builder
-                                .append_operation(llvm::get_element_ptr(
-                                    context,
-                                    value,
-                                    DenseI32ArrayAttribute::new(context, &[index as i32]),
-                                    value.r#type(),
-                                    info.field_types[index],
-                                    location,
-                                ))
-                                .result(0)?
-                                .into(),
-                            &[],
-                            location,
-                        ))
-                        .result(0)?
-                        .into()
-                } else {
+                Some(
                     builder
                         .append_operation(llvm::extract_value(
                             context,
@@ -443,8 +426,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                             location,
                         ))
                         .result(0)?
-                        .into()
-                })
+                        .into(),
+                )
             }
             syn::Expr::If(r#if) => {
                 let condition = self.compile_expression_value(builder, &r#if.cond, variables)?;
