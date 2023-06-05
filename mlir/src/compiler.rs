@@ -798,13 +798,14 @@ mod tests {
         register_all_dialects(&registry);
 
         let context = Context::new();
+        context.append_dialect_registry(&registry);
+        context.load_all_available_dialects();
+        register_all_llvm_translations(&context);
+
         context.attach_diagnostic_handler(|diagnostic| {
             println!("{}", diagnostic);
             true
         });
-        context.append_dialect_registry(&registry);
-        context.load_all_available_dialects();
-        register_all_llvm_translations(&context);
 
         context
     }
