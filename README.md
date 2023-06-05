@@ -1,6 +1,8 @@
 # Autophagy
 
-Isomorphic Rust.
+Yet another AOT compiler for Rust to realize true isomorphism.
+
+## Background
 
 ## Examples
 
