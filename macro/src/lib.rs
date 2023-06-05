@@ -5,14 +5,14 @@ mod utility;
 use self::attribute_list::AttributeList;
 use proc_macro::TokenStream;
 use std::error::Error;
-use syn::{parse_macro_input, ItemFn};
+use syn::{parse_macro_input, Item};
 
 #[proc_macro_attribute]
 pub fn quote(attributes: TokenStream, item: TokenStream) -> TokenStream {
     let attributes = parse_macro_input!(attributes as AttributeList);
-    let function = parse_macro_input!(item as ItemFn);
+    let item = parse_macro_input!(item as Item);
 
-    convert_result(quote::generate(&attributes, &function))
+    convert_result(quote::generate(&attributes, &item))
 }
 
 fn convert_result(result: Result<TokenStream, Box<dyn Error>>) -> TokenStream {

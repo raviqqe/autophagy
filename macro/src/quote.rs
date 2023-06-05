@@ -3,27 +3,27 @@ use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::quote;
 use std::error::Error;
-use syn::{Expr, ExprLit, ItemFn, Lit, LitStr};
+use syn::{Expr, ExprLit, Item, ItemFn, ItemStruct, Lit, LitStr};
 
 const RAW_STRING_PREFIX: &str = "r#";
 
-pub fn generate(
+pub fn generate(attributes: &AttributeList, item: &Item) -> Result<TokenStream, Box<dyn Error>> {
+    match item {
+        Item::Fn(function) => generate_function(attributes, function),
+        Item::Struct(r#struct) => generate_struct(attributes, r#struct),
+        _ => Err("only functions and structs can be quoted".into()),
+    }
+}
+
+fn generate_function(
     attributes: &AttributeList,
     function: &ItemFn,
 ) -> Result<TokenStream, Box<dyn Error>> {
     let crate_path = parse_crate_path(attributes)?;
     let ident = &function.sig.ident;
-    let ident_string = ident
-        .to_string()
-        .strip_prefix(RAW_STRING_PREFIX)
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| ident.to_string());
     let visibility = &function.vis;
-    let quote_name = Ident::new(&(ident_string + "_fn"), function.sig.ident.span());
-    let name_string = Expr::Lit(ExprLit {
-        attrs: Vec::new(),
-        lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
-    });
+    let quote_name = Ident::new(&get_quote_name(ident, "_fn"), ident.span());
+    let name_string = get_name_string(ident);
 
     Ok(quote! {
         #visibility fn #quote_name() -> #crate_path::Fn {
@@ -33,4 +33,41 @@ pub fn generate(
         #function
     }
     .into())
+}
+
+fn generate_struct(
+    attributes: &AttributeList,
+    r#struct: &ItemStruct,
+) -> Result<TokenStream, Box<dyn Error>> {
+    let crate_path = parse_crate_path(attributes)?;
+    let ident = &r#struct.ident;
+    let visibility = &r#struct.vis;
+    let quote_name = Ident::new(&get_quote_name(ident, "_struct"), ident.span());
+    let name_string = get_name_string(ident);
+
+    Ok(quote! {
+        #visibility fn #quote_name() -> #crate_path::Struct {
+            #crate_path::Struct::new(#name_string, syn::parse2(quote::quote!(#r#struct)).unwrap())
+        }
+
+        #r#struct
+    }
+    .into())
+}
+
+fn get_quote_name(ident: &Ident, suffix: &str) -> String {
+    ident
+        .to_string()
+        .strip_prefix(RAW_STRING_PREFIX)
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| ident.to_string())
+        .to_lowercase()
+        + suffix
+}
+
+fn get_name_string(ident: &Ident) -> Expr {
+    Expr::Lit(ExprLit {
+        attrs: Vec::new(),
+        lit: Lit::Str(LitStr::new(&ident.to_string(), ident.span())),
+    })
 }
