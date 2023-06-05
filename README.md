@@ -4,7 +4,9 @@ Isomorphic Rust.
 
 We do not need to validate types as the `instruction` macro keeps the original function definitions.
 
-## Constructs
+## Supported features
+
+### Syntax
 
 - [x] Arithmetic/binary/boolean operators
 - [x] Dereference operator
@@ -17,6 +19,7 @@ We do not need to validate types as the `instruction` macro keeps the original f
 - [x] `loop` statement
 - [x] `if` expression
 - [x] `struct` field access
+- [ ] Operator assignment (e.g. `+=`)
 
 ### Types
 
@@ -34,13 +37,6 @@ We do not need to validate types as the `instruction` macro keeps the original f
 - [x] Floating-point numbers
 - [x] Struct
 - [ ] Array
-
-## Not supported
-
-- Operator assignment (e.g. `+=`)
-- Method calls
-- `for` loop
-- `async` functions
 
 ## License
 
