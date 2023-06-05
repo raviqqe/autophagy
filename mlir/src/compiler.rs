@@ -333,6 +333,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(match expression {
             syn::Expr::Assign(assign) => {
+                // TODO Support a `*` pointer dereference.
+                // TODO Support recursive LHS dereference.
                 builder.append_operation(match assign.left.as_ref() {
                     syn::Expr::Field(field) => {
                         let mut ptr = self.compile_ptr(builder, &field.base, variables)?;
