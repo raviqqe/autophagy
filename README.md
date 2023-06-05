@@ -24,6 +24,8 @@ We do not need to validate types as the `instruction` macro keeps the original f
 - [x] Integers
 - [x] Floating-point numbers
 - [x] References
+- [x] Struct
+- [ ] Array
 
 ### Literals
 
