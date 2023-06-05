@@ -1,12 +1,11 @@
 use crate::Error;
 use autophagy::{Fn, Struct};
-
 use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
-            FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute, StringAttribute,
-            TypeAttribute,
+            DenseI32ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute,
+            StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, Value,
@@ -380,6 +379,38 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .result(0)
                     .map(Into::into)
                     .ok()
+            }
+            syn::Expr::Field(field) => {
+                let value = self
+                    .compile_expression(builder, &field.base, variables)?
+                    .ok_or_else(|| {
+                        Error::ValueExpected("struct field access requires struct value".into())
+                    })?;
+                let index = match &field.member {
+                    syn::Member::Named(name) => todo!(),
+                    syn::Member::Unnamed(index) => index.index as i32,
+                };
+
+                Some(
+                    builder
+                        .append_operation(memref::load(
+                            builder
+                                .append_operation(llvm::get_element_ptr(
+                                    context,
+                                    value,
+                                    DenseI32ArrayAttribute::new(context, &[index]),
+                                    value.r#type(),
+                                    value.r#type().element(index)?,
+                                    location,
+                                ))
+                                .result(0)?
+                                .into(),
+                            &[],
+                            location,
+                        ))
+                        .result(0)?
+                        .into(),
+                )
             }
             syn::Expr::If(r#if) => {
                 let condition = self.compile_expression_value(builder, &r#if.cond, variables)?;

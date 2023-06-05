@@ -9,6 +9,7 @@ pub enum Error {
     AddFn(String),
     Melior(melior::Error),
     Syn(syn::Error),
+    ValueExpected(String),
     VariableNotDefined(String),
     NotSupported(&'static str),
 }
@@ -24,6 +25,7 @@ impl Display for Error {
                 write!(formatter, "{name} not supported")
             }
             Self::Syn(error) => write!(formatter, "{}", error),
+            Self::ValueExpected(message) => write!(formatter, "value expected: {}", message),
             Self::VariableNotDefined(name) => {
                 write!(formatter, "variable not defined: {name}")
             }
