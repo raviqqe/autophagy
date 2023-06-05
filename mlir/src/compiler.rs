@@ -1084,8 +1084,10 @@ mod tests {
 
         let location = Location::unknown(&context);
         let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
 
-        compile(&context, &module, &foo_fn()).unwrap();
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
 
         assert!(module.as_operation().verify());
     }
