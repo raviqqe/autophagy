@@ -5,7 +5,6 @@ Isomorphic Rust.
 ## Examples
 
 ```rust
-use autophagy::Fn;
 use autophagy_mlir::Compiler;
 use melior::{
     dialect::DialectRegistry,
