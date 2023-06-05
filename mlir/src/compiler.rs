@@ -1063,6 +1063,29 @@ mod tests {
     }
 
     #[test]
+    fn struct_field() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: usize,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: Foo) -> usize {
+            x.bar
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+
+        compile(&context, &module, &foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
     fn r#while() {
         #[allow(dead_code)]
         #[autophagy::quote]
