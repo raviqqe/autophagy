@@ -6,12 +6,12 @@ use syn::ItemStruct;
 pub struct Struct {
     name: &'static str,
     #[derivative(Debug = "ignore")]
-    r#struct: ItemStruct,
+    ast: ItemStruct,
 }
 
 impl Struct {
-    pub const fn new(name: &'static str, r#struct: ItemStruct) -> Self {
-        Self { name, r#struct }
+    pub const fn new(name: &'static str, ast: ItemStruct) -> Self {
+        Self { name, ast }
     }
 
     pub fn name(&self) -> &str {
@@ -19,6 +19,6 @@ impl Struct {
     }
 
     pub fn ast(&self) -> &ItemStruct {
-        &self.r#struct
+        &self.ast
     }
 }
