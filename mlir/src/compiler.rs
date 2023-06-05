@@ -4,8 +4,8 @@ use melior::{
     dialect::{arith, func, llvm, memref, scf},
     ir::{
         attribute::{
-            DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute, IntegerAttribute,
-            StringAttribute, TypeAttribute,
+            DenseI32ArrayAttribute, DenseI64ArrayAttribute, FlatSymbolRefAttribute, FloatAttribute,
+            IntegerAttribute, StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
         Attribute, Block, Identifier, Location, Module, OperationRef, Region, Type, TypeLike,
@@ -391,11 +391,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ok_or_else(|| {
                         Error::ValueExpected("struct field access requires struct value".into())
                     })?;
-
-                if value.r#type().is_mem_ref() {
-                    return Err(Error::NotSupported("struct reference field access"));
-                }
-
                 let info = self
                     .structs
                     .values()
@@ -413,7 +408,26 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     syn::Member::Unnamed(index) => index.index as usize,
                 };
 
-                Some(
+                Some(if value.r#type().is_mem_ref() {
+                    builder
+                        .append_operation(memref::load(
+                            builder
+                                .append_operation(llvm::get_element_ptr(
+                                    context,
+                                    value,
+                                    DenseI32ArrayAttribute::new(context, &[index as i32]),
+                                    value.r#type(),
+                                    info.field_types[index],
+                                    location,
+                                ))
+                                .result(0)?
+                                .into(),
+                            &[],
+                            location,
+                        ))
+                        .result(0)?
+                        .into()
+                } else {
                     builder
                         .append_operation(llvm::extract_value(
                             context,
@@ -423,8 +437,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                             location,
                         ))
                         .result(0)?
-                        .into(),
-                )
+                        .into()
+                })
             }
             syn::Expr::If(r#if) => {
                 let condition = self.compile_expression_value(builder, &r#if.cond, variables)?;
