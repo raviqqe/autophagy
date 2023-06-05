@@ -1235,6 +1235,35 @@ mod tests {
     }
 
     #[test]
+    fn struct_field_literal() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+            baz: f64,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo() -> Foo {
+            Foo {
+                bar: 42i32,
+                baz: 3.14f64,
+            }
+        }
+
+        let context = create_test_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
     fn r#while() {
         #[allow(dead_code)]
         #[autophagy::quote]
