@@ -500,6 +500,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 None
             }
+            syn::Expr::Paren(parenthesis) => {
+                self.compile_expression(builder, &parenthesis.expr, variables)?
+            }
             syn::Expr::Path(path) => Some(self.compile_path(builder, path, variables)?),
             syn::Expr::Unary(operation) => self
                 .compile_unary_operation(builder, operation, variables)?
@@ -1075,6 +1078,31 @@ mod tests {
         #[autophagy::quote]
         fn foo(x: Foo) -> i32 {
             x.bar
+        }
+
+        let context = create_context();
+
+        let location = Location::unknown(&context);
+        let module = Module::new(location);
+        let mut compiler = Compiler::new(&context, &module);
+
+        compiler.compile_struct(&foo_struct()).unwrap();
+        compiler.compile_fn(&foo_fn()).unwrap();
+
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn struct_reference_field() {
+        #[autophagy::quote]
+        struct Foo {
+            bar: i32,
+        }
+
+        #[allow(dead_code)]
+        #[autophagy::quote]
+        fn foo(x: &Foo) -> i32 {
+            (*x).bar
         }
 
         let context = create_context();
