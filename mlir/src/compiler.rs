@@ -1,5 +1,5 @@
 use crate::Error;
-use autophagy::Fn;
+use autophagy::{Fn, Struct};
 
 use melior::{
     dialect::{arith, func, llvm, memref, scf},
@@ -21,6 +21,7 @@ pub struct Compiler<'c, 'm> {
     context: &'c Context,
     module: &'m Module<'c>,
     functions: HashMap<String, FunctionType<'c>>,
+    structs: HashMap<String, Type<'c>>,
 }
 
 impl<'c, 'm> Compiler<'c, 'm> {
@@ -29,10 +30,20 @@ impl<'c, 'm> Compiler<'c, 'm> {
             context,
             module,
             functions: Default::default(),
+            structs: Default::default(),
         }
     }
 
-    pub fn compile(&mut self, r#fn: &Fn) -> Result<(), Error> {
+    pub fn compile_struct(&mut self, r#struct: &Struct) -> Result<(), Error> {
+        self.structs.insert(
+            r#struct.name().into(),
+            llvm::r#type::r#struct(self.context, &r#struct.r#struct().fields, false),
+        );
+
+        Ok(())
+    }
+
+    pub fn compile_fn(&mut self, r#fn: &Fn) -> Result<(), Error> {
         let function = r#fn.ast();
         let context = self.context;
         let location = Location::unknown(context);
