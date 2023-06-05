@@ -43,7 +43,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .ast()
                     .fields
                     .iter()
-                    .map(|field| self.compile_field(field))
+                    .map(|field| self.compile_type(field))
                     .collect::<Result<Vec<_>, _>>()?,
                 false,
             ),
