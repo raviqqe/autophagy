@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 mod compiler;
 mod error;
 #[cfg(test)]

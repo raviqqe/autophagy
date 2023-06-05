@@ -1,3 +1,13 @@
 {
-  "words": ["addi", "alloca", "asyncness", "melior", "memref", "mlir"]
+  "words": [
+    "addi",
+    "alloca",
+    "asyncness",
+    "clippy",
+    "eprintln",
+    "melior",
+    "memref",
+    "mlir",
+    "struct"
+  ]
 }
