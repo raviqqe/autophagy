@@ -337,7 +337,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 builder.append_operation(match assign.left.as_ref() {
                     syn::Expr::Field(field) => {
                         let ptr = self.compile_ptr(builder, &field.base, variables)?;
-                        let info: &StructInfo<'c> = self.get_struct_info({
+                        let info = self.get_struct_info({
                             let mut r#type = ptr.r#type();
 
                             while let Ok(memref) = MemRefType::try_from(r#type) {
