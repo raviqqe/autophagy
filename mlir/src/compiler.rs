@@ -37,7 +37,16 @@ impl<'c, 'm> Compiler<'c, 'm> {
     pub fn compile_struct(&mut self, r#struct: &Struct) -> Result<(), Error> {
         self.structs.insert(
             r#struct.name().into(),
-            llvm::r#type::r#struct(self.context, &r#struct.r#struct().fields, false),
+            llvm::r#type::r#struct(
+                self.context,
+                &r#struct
+                    .ast()
+                    .fields
+                    .iter()
+                    .map(|field| self.compile_field(field))
+                    .collect::<Result<Vec<_>, _>>()?,
+                false,
+            ),
         );
 
         Ok(())
