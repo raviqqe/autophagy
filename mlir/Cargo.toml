@@ -13,4 +13,4 @@ autophagy = { version = "0.1", path = "../autophagy" }
 melior = "0.9"
 quote = "1.0.28"
 syn = "2.0.18"
-train-map = "0.1.0"
+train-map = "0.1.1"
