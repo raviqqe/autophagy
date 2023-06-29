@@ -11,6 +11,6 @@ readme = "../README.md"
 [dependencies]
 autophagy = { version = "0.1", path = "../autophagy" }
 melior = "0.9"
-quote = "1.0.28"
+quote = "1.0.29"
 syn = "2.0.22"
 train-map = "0.1.1"
