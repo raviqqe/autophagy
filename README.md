@@ -72,7 +72,7 @@ pass_manager.run(&mut module).unwrap();
 
 assert!(module.as_operation().verify());
 
-let engine = ExecutionEngine::new(&module, 2, &[], false);
+let engine = ExecutionEngine::new(&context, &module, 2, &[], false);
 
 let mut argument = 5;
 let mut result = -1;
@@ -80,6 +80,7 @@ let mut result = -1;
 assert_eq!(
     unsafe {
         engine.invoke_packed(
+            &context,
             "fibonacci",
             &mut [
                 &mut argument as *mut _ as *mut _,
