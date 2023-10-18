@@ -126,7 +126,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         .into();
 
                     block.append_operation(memref::store(
-                        &context,
                         block.argument(0)?.into(),
                         ptr,
                         &[],
@@ -249,9 +248,9 @@ impl<'c, 'm> Compiler<'c, 'm> {
         }
 
         builder.append_operation(if let Some(value) = return_value {
-            terminator(&context, &[value], location)
+            terminator(&[value], location)
         } else {
-            terminator(&context, &[], location)
+            terminator(&[], location)
         });
 
         Ok(if function_scope {
@@ -291,7 +290,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
             .into();
 
         builder.append_operation(memref::store(
-            &context,
             value,
             ptr,
             &[],
@@ -343,7 +341,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                         while MemRefType::try_from(ptr.r#type())?.element().is_mem_ref() {
                             ptr = builder
-                                .append_operation(memref::load(&context, ptr, &[], location))
+                                .append_operation(memref::load(ptr, &[], location))
                                 .result(0)?
                                 .into();
                         }
@@ -352,17 +350,11 @@ impl<'c, 'm> Compiler<'c, 'm> {
                             self.get_struct_info(MemRefType::try_from(ptr.r#type())?.element())?;
 
                         memref::store(
-                            &context,
                             builder
                                 .append_operation(llvm::insert_value(
                                     context,
                                     builder
-                                        .append_operation(memref::load(
-                                            &context,
-                                            ptr,
-                                            &[],
-                                            location,
-                                        ))
+                                        .append_operation(memref::load(ptr, &[], location))
                                         .result(0)?
                                         .into(),
                                     DenseI64ArrayAttribute::new(
@@ -390,7 +382,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         )?;
 
                         memref::store(
-                            &context,
                             self.compile_expression_value(builder, &assign.right, variables)?,
                             ptr,
                             &[],
@@ -414,7 +405,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 Some(
                     builder
                         .append_operation(scf::execute_region(
-                            &context,
                             &r#type.into_iter().collect::<Vec<_>>(),
                             region,
                             location,
@@ -428,7 +418,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 builder
                     .append_operation(func::call_indirect(
-                        &context,
                         function,
                         &call
                             .args
@@ -456,7 +445,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 while value.r#type().is_mem_ref() {
                     value = builder
-                        .append_operation(memref::load(&context, value, &[], location))
+                        .append_operation(memref::load(value, &[], location))
                         .result(0)?
                         .into();
                 }
@@ -487,7 +476,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                     let value = self.compile_expression(&block, expression, &mut variables)?;
                     block.append_operation(scf::r#yield(
-                        &context,
                         &value.into_iter().collect::<Vec<_>>(),
                         location,
                     ));
@@ -503,7 +491,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 builder
                     .append_operation(scf::r#if(
-                        &context,
                         condition,
                         &then_type.or(else_type).into_iter().collect::<Vec<_>>(),
                         then_region,
@@ -521,14 +508,12 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 .ok(),
             syn::Expr::Loop(r#loop) => {
                 builder.append_operation(scf::r#while(
-                    &context,
                     &[],
                     &[],
                     {
                         let block = Block::new(&[]);
 
                         block.append_operation(scf::condition(
-                            &context,
                             block
                                 .append_operation(arith::constant(
                                     context,
@@ -566,7 +551,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     .get(&name)
                     .ok_or(Error::StructNotDefined(name))?;
                 let mut value = builder
-                    .append_operation(llvm::undef(&context, info.r#type, location))
+                    .append_operation(llvm::undef(info.r#type, location))
                     .result(0)?
                     .into();
 
@@ -594,7 +579,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 .ok(),
             syn::Expr::While(r#while) => {
                 builder.append_operation(scf::r#while(
-                    &context,
                     &[],
                     &[],
                     {
@@ -602,7 +586,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                         let mut variables = variables.fork();
 
                         block.append_operation(scf::condition(
-                            &context,
                             self.compile_expression_value(&block, &r#while.cond, &mut variables)?,
                             &[],
                             location,
@@ -648,7 +631,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         // spell-checker: disable
         Ok(builder.append_operation(match &operation.op {
-            syn::UnOp::Deref(_) => memref::load(&context, value, &[], location),
+            syn::UnOp::Deref(_) => memref::load(value, &[], location),
             syn::UnOp::Neg(_) => arith::subi(
                 &context,
                 builder
@@ -808,7 +791,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
         } else {
             Ok(builder
                 .append_operation(memref::load(
-                    &context,
                     self.compile_variable(&name, variables)?,
                     &[],
                     Location::unknown(context),
@@ -842,7 +824,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         Ok(builder
             .append_operation(llvm::undef(
-                &context,
                 // TODO Should we use zero-field struct instead?
                 llvm::r#type::void(context),
                 Location::unknown(context),
