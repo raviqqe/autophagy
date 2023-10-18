@@ -633,7 +633,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(builder.append_operation(match &operation.op {
             syn::UnOp::Deref(_) => memref::load(value, &[], location),
             syn::UnOp::Neg(_) => arith::subi(
-                &context,
                 builder
                     .append_operation(arith::constant(
                         context,
@@ -646,7 +645,6 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 location,
             ),
             syn::UnOp::Not(_) => arith::xori(
-                &context,
                 builder
                     .append_operation(arith::constant(
                         context,
@@ -676,18 +674,18 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
         // spell-checker: disable
         Ok(builder.append_operation(match &operation.op {
-            syn::BinOp::Add(_) => arith::addi(&context, left, right, location),
-            syn::BinOp::Sub(_) => arith::subi(&context, left, right, location),
-            syn::BinOp::Mul(_) => arith::muli(&context, left, right, location),
-            syn::BinOp::Div(_) => arith::divsi(&context, left, right, location),
-            syn::BinOp::Rem(_) => arith::remsi(&context, left, right, location),
-            syn::BinOp::And(_) => arith::andi(&context, left, right, location),
-            syn::BinOp::Or(_) => arith::ori(&context, left, right, location),
-            syn::BinOp::BitXor(_) => arith::xori(&context, left, right, location),
-            syn::BinOp::BitAnd(_) => arith::andi(&context, left, right, location),
-            syn::BinOp::BitOr(_) => arith::ori(&context, left, right, location),
-            syn::BinOp::Shl(_) => arith::shli(&context, left, right, location),
-            syn::BinOp::Shr(_) => arith::shrsi(&context, left, right, location),
+            syn::BinOp::Add(_) => arith::addi(left, right, location),
+            syn::BinOp::Sub(_) => arith::subi(left, right, location),
+            syn::BinOp::Mul(_) => arith::muli(left, right, location),
+            syn::BinOp::Div(_) => arith::divsi(left, right, location),
+            syn::BinOp::Rem(_) => arith::remsi(left, right, location),
+            syn::BinOp::And(_) => arith::andi(left, right, location),
+            syn::BinOp::Or(_) => arith::ori(left, right, location),
+            syn::BinOp::BitXor(_) => arith::xori(left, right, location),
+            syn::BinOp::BitAnd(_) => arith::andi(left, right, location),
+            syn::BinOp::BitOr(_) => arith::ori(left, right, location),
+            syn::BinOp::Shl(_) => arith::shli(left, right, location),
+            syn::BinOp::Shr(_) => arith::shrsi(left, right, location),
             syn::BinOp::Eq(_) => {
                 arith::cmpi(context, arith::CmpiPredicate::Eq, left, right, location)
             }

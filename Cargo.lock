@@ -641,7 +641,7 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 [[package]]
 name = "melior"
 version = "0.12.2"
-source = "git+https://github.com/raviqqe/melior#46439ee98321421f0caa4a6e4d4828b644015f1b"
+source = "git+https://github.com/raviqqe/melior#c7a78469fb63174953fc424a7b2f22879dbae058"
 dependencies = [
  "dashmap",
  "melior-macro",
@@ -652,7 +652,7 @@ dependencies = [
 [[package]]
 name = "melior-macro"
 version = "0.6.1"
-source = "git+https://github.com/raviqqe/melior#46439ee98321421f0caa4a6e4d4828b644015f1b"
+source = "git+https://github.com/raviqqe/melior#c7a78469fb63174953fc424a7b2f22879dbae058"
 dependencies = [
  "comrak",
  "convert_case",
