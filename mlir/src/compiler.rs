@@ -388,7 +388,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                             location,
                         )
                     }
-                    _ => todo!("{:?}", expression),
+                    _ => todo!(),
                 });
 
                 None
@@ -601,7 +601,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
 
                 None
             }
-            _ => todo!("{:?}", expression),
+            _ => todo!(),
         })
     }
 
