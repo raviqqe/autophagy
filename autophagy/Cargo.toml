@@ -12,4 +12,4 @@ readme = "../README.md"
 autophagy-macro = { version = "0.1", path = "../macro" }
 derivative = "2.2.0"
 quote = "1.0.33"
-syn = "2.0.41"
+syn = "2.0.42"
