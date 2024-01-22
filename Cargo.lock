@@ -531,23 +531,23 @@ dependencies = [
 
 [[package]]
 name = "inkwell"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f4fcb4a4fa0b8f7b4178e24e6317d6f8b95ab500d8e6e1bd4283b6860e369c1"
+checksum = "32bf6d00838475201af3378a4adeca10e92a4a9dccb980dab0b432d9d4f2e514"
 dependencies = [
  "either",
  "inkwell_internals",
  "libc",
  "llvm-sys",
  "once_cell",
- "parking_lot",
+ "thiserror",
 ]
 
 [[package]]
 name = "inkwell_internals"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b185e7d068d6820411502efa14d8fbf010750485399402156b72dd2a548ef8e9"
+checksum = "4fa4d8d74483041a882adaa9a29f633253a66dde85055f0495c121620ac484b2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -733,16 +733,6 @@ checksum = "7b829e3d7e9cc74c7e315ee8edb185bf4190da5acde74afd7fc59c35b1f086e7"
 dependencies = [
  "cc",
  "pkg-config",
-]
-
-[[package]]
-name = "parking_lot"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
-dependencies = [
- "lock_api",
- "parking_lot_core",
 ]
 
 [[package]]
