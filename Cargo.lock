@@ -640,9 +640,9 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
 name = "melior"
-version = "0.16.2"
+version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e76dd7ff903474595023aebb93f8287667a2fe95132c65e1c77efdb99c64a973"
+checksum = "7b37efcf6c30d7f3c8d38b8f449afe300d9e7c2d31c4f5981a09d3e22e51e530"
 dependencies = [
  "dashmap",
  "melior-macro",
