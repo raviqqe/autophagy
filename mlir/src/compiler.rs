@@ -518,8 +518,8 @@ impl<'c, 'm> Compiler<'c, 'm> {
                                 .append_operation(arith::constant(
                                     context,
                                     IntegerAttribute::new(
-                                        true as i64,
                                         IntegerType::new(context, 1).into(),
+                                        true as i64,
                                     )
                                     .into(),
                                     location,
@@ -636,7 +636,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 builder
                     .append_operation(arith::constant(
                         context,
-                        IntegerAttribute::new(0, Type::index(context)).into(),
+                        IntegerAttribute::new(Type::index(context), 0).into(),
                         location,
                     ))
                     .result(0)?
@@ -648,7 +648,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 builder
                     .append_operation(arith::constant(
                         context,
-                        IntegerAttribute::new(0, Type::index(context)).into(),
+                        IntegerAttribute::new(Type::index(context), 0).into(),
                         location,
                     ))
                     .result(0)?
@@ -730,7 +730,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         Ok(builder.append_operation(match &literal.lit {
             syn::Lit::Bool(boolean) => arith::constant(
                 context,
-                IntegerAttribute::new(boolean.value as i64, IntegerType::new(context, 1).into())
+                IntegerAttribute::new(IntegerType::new(context, 1).into(), boolean.value as i64)
                     .into(),
                 location,
             ),
@@ -738,11 +738,11 @@ impl<'c, 'm> Compiler<'c, 'm> {
             syn::Lit::Int(integer) => arith::constant(
                 context,
                 IntegerAttribute::new(
-                    integer.base10_parse::<i64>()?,
                     match integer.suffix() {
                         "" => Type::index(context),
                         name => self.compile_primitive_type(name)?,
                     },
+                    integer.base10_parse::<i64>()?,
                 )
                 .into(),
                 location,
@@ -751,11 +751,11 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 context,
                 FloatAttribute::new(
                     context,
-                    float.base10_parse::<f64>()?,
                     match float.suffix() {
                         "" => Type::index(context),
                         name => self.compile_primitive_type(name)?,
                     },
+                    float.base10_parse::<f64>()?,
                 )
                 .into(),
                 location,
