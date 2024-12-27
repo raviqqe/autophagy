@@ -174,9 +174,9 @@ dependencies = [
 
 [[package]]
 name = "comrak"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "453dcb42e33f7b474d7e0db12e0b8d82802c88f35cf5a1d8c297d0dfcecb154f"
+checksum = "48ae8f3e7e3f3d424cbb33354fc36943d507327d210aa5794b0192f4be726c6d"
 dependencies = [
  "bon",
  "caseless",
@@ -388,9 +388,9 @@ checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
 
 [[package]]
 name = "melior"
-version = "0.20.1"
+version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6359eb3167955f03dd9664feeb042cb31fbb3509e2118ccb044cfd450e7dcf57"
+checksum = "1cfcb398e6571361b6f54fd0057066d9b47a822bcb797bf5867e5412e9e6f387"
 dependencies = [
  "melior-macro",
  "mlir-sys",
@@ -398,9 +398,9 @@ dependencies = [
 
 [[package]]
 name = "melior-macro"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e14d65328cdb958e2b9fa66f440b84d8e410d9e16742cad4237f2458ab8c17e"
+checksum = "3086e8c12eb1999d636595cc3c2aee82a28d4bb80163267d51bd66a617cdaefc"
 dependencies = [
  "comrak",
  "convert_case",
