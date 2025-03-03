@@ -11,5 +11,5 @@ readme = "../README.md"
 [dependencies]
 autophagy-macro = { version = "0.1", path = "../macro" }
 derivative = "2.2.0"
-quote = "1.0.38"
+quote = "1.0.39"
 syn = "2.0.98"
