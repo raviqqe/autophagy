@@ -8,8 +8,8 @@ use melior::{
             StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, ShapedTypeLike, Type,
-        TypeLike, Value, ValueLike,
+        Attribute, Block, BlockLike, Identifier, Location, Module, OperationRef, Region,
+        RegionLike, ShapedTypeLike, Type, TypeLike, Value, ValueLike,
     },
     Context,
 };
@@ -858,7 +858,10 @@ mod tests {
     use super::*;
     use crate::test::create_test_context;
     use autophagy::math;
-    use melior::{ir::Location, Context};
+    use melior::{
+        ir::{operation::OperationLike, Location},
+        Context,
+    };
 
     fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
         Compiler::new(context, module).compile_fn(r#fn)?;

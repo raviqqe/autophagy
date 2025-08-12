@@ -18,7 +18,7 @@ This crate aims to provide fully in-memory compilation of Rust code into assembl
 use autophagy_mlir::Compiler;
 use melior::{
     dialect::DialectRegistry,
-    ir::{Location, Module},
+    ir::{Location, Module, operation::OperationLike},
     pass::{self, PassManager},
     utility::{register_all_dialects, register_all_llvm_translations},
     Context, ExecutionEngine,
@@ -56,6 +56,7 @@ Compiler::new(&context, &module).compile_fn(&fibonacci_fn()).unwrap();
 assert!(module.as_operation().verify());
 
 let pass_manager = PassManager::new(&context);
+pass_manager.add_pass(pass::conversion::create_to_llvm());
 pass_manager.add_pass(pass::conversion::create_func_to_llvm());
 
 pass_manager

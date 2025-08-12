@@ -1,15 +1,15 @@
 [package]
 name = "autophagy"
-description = "Yet another AOT compiler for Rust"
 version = "0.1.1"
 edition = "2021"
-license = "Apache-2.0"
-repository = "https://github.com/raviqqe/autophagy"
+description = "Yet another AOT compiler for Rust"
 documentation = "https://raviqqe.github.io/autophagy/autophagy/"
 readme = "../README.md"
+repository = "https://github.com/raviqqe/autophagy"
+license = "Apache-2.0"
 
 [dependencies]
 autophagy-macro = { version = "0.1", path = "../macro" }
 derivative = "2.2.0"
 quote = "1.0.40"
-syn = "2.0.104"
+syn = { version = "2.0.104", features = ["full"] }
