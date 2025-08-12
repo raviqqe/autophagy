@@ -8,8 +8,8 @@ use melior::{
             StringAttribute, TypeAttribute,
         },
         r#type::{FunctionType, IntegerType, MemRefType},
-        Attribute, Block, Identifier, Location, Module, OperationRef, Region, ShapedTypeLike, Type,
-        TypeLike, Value, ValueLike,
+        Attribute, Block, BlockLike, Identifier, Location, Module, OperationRef, Region,
+        RegionLike, ShapedTypeLike, Type, TypeLike, Value, ValueLike,
     },
     Context,
 };
