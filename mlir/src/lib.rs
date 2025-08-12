@@ -14,7 +14,7 @@ mod tests {
     use crate::test::create_test_context;
     use autophagy::Fn;
     use melior::{
-        ir::{Location, Module},
+        ir::{operation::OperationLike, Location, Module},
         pass::{self, PassManager},
         Context, ExecutionEngine,
     };

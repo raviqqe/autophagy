@@ -858,7 +858,10 @@ mod tests {
     use super::*;
     use crate::test::create_test_context;
     use autophagy::math;
-    use melior::{ir::Location, Context};
+    use melior::{
+        ir::{operation::OperationLike, Location},
+        Context,
+    };
 
     fn compile<'c>(context: &'c Context, module: &Module<'c>, r#fn: &Fn) -> Result<(), Error> {
         Compiler::new(context, module).compile_fn(r#fn)?;
