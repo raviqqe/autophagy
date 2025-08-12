@@ -56,6 +56,7 @@ Compiler::new(&context, &module).compile_fn(&fibonacci_fn()).unwrap();
 assert!(module.as_operation().verify());
 
 let pass_manager = PassManager::new(&context);
+pass_manager.add_pass(pass::conversion::create_to_llvm());
 pass_manager.add_pass(pass::conversion::create_func_to_llvm());
 
 pass_manager
