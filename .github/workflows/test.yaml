@@ -25,5 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - uses: Homebrew/actions/setup-homebrew@master
+        with:
+          stable: true
       - run: tools/setup.sh
       - run: cargo test
