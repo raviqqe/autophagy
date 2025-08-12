@@ -13,7 +13,7 @@ impl Display for LlvmError {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
         match self {
             Self::AddFn(name) => {
-                write!(formatter, "failed to add a function: {}", name)
+                write!(formatter, "failed to add a function: {name}")
             }
         }
     }
