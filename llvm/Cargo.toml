@@ -10,4 +10,4 @@ readme = "../README.md"
 
 [dependencies]
 autophagy = { version = "0.1", path = "../autophagy" }
-inkwell = { version = "0.6.0", features = ["llvm16-0"] }
+inkwell = { version = "0.7.0", features = ["llvm16-0"] }
