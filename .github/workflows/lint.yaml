@@ -40,6 +40,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: gaurav-nelson/github-action-markdown-link-check@7399cff7dbff60b761f04ca5d00bef5d4cd2cfc9 # v0.3.0
+      - uses: gaurav-nelson/github-action-markdown-link-check@3c3b66f1f7d0900e37b71eca45b63ea9eedfce31 # v1.0.17
         with:
           config-file: markdown-link-check.json
