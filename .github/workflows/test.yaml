@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: raviqqe/enable-homebrew@0cd19e7c245801a3494a29415862f79b874536aa # v1.0.4
+      - uses: raviqqe/enable-homebrew@6bd383659a321c332bd0c0ed445c32d54e04efe8 # v1.0.5
       - run: tools/setup.sh
       - run: cargo build
   unit_test:
@@ -24,6 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: raviqqe/enable-homebrew@0cd19e7c245801a3494a29415862f79b874536aa # v1.0.4
+      - uses: raviqqe/enable-homebrew@6bd383659a321c332bd0c0ed445c32d54e04efe8 # v1.0.5
       - run: tools/setup.sh
       - run: cargo test
