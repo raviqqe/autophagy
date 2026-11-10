@@ -14,7 +14,7 @@ mod tests {
     use crate::test::create_test_context;
     use autophagy::Fn;
     use melior::{
-        ir::{Location, Module},
+        ir::{operation::OperationLike, Location, Module},
         pass::{self, PassManager},
         Context, ExecutionEngine,
     };
@@ -50,22 +50,13 @@ mod tests {
         assert!(module.as_operation().verify());
 
         let pass_manager = PassManager::new(&context);
-        pass_manager.add_pass(pass::conversion::create_func_to_llvm());
-
-        pass_manager
-            .nested_under("func.func")
-            .add_pass(pass::conversion::create_arith_to_llvm());
-        pass_manager
-            .nested_under("func.func")
-            .add_pass(pass::conversion::create_index_to_llvm());
         pass_manager.add_pass(pass::conversion::create_scf_to_control_flow());
-        pass_manager.add_pass(pass::conversion::create_control_flow_to_llvm());
-        pass_manager.add_pass(pass::conversion::create_finalize_mem_ref_to_llvm());
+        pass_manager.add_pass(pass::conversion::create_to_llvm());
 
         assert_eq!(pass_manager.run(&mut module), Ok(()));
         assert!(module.as_operation().verify());
 
-        let engine = ExecutionEngine::new(&module, 2, &[], false);
+        let engine = ExecutionEngine::new(&module, 2, &[], false, false);
 
         let mut argument = 5;
         let mut result = -1;
@@ -110,22 +101,13 @@ mod tests {
         assert!(module.as_operation().verify());
 
         let pass_manager = PassManager::new(&context);
-        pass_manager.add_pass(pass::conversion::create_func_to_llvm());
-
-        pass_manager
-            .nested_under("func.func")
-            .add_pass(pass::conversion::create_arith_to_llvm());
-        pass_manager
-            .nested_under("func.func")
-            .add_pass(pass::conversion::create_index_to_llvm());
         pass_manager.add_pass(pass::conversion::create_scf_to_control_flow());
-        pass_manager.add_pass(pass::conversion::create_control_flow_to_llvm());
-        pass_manager.add_pass(pass::conversion::create_finalize_mem_ref_to_llvm());
+        pass_manager.add_pass(pass::conversion::create_to_llvm());
 
         assert_eq!(pass_manager.run(&mut module), Ok(()));
         assert!(module.as_operation().verify());
 
-        let engine = ExecutionEngine::new(&module, 2, &[], false);
+        let engine = ExecutionEngine::new(&module, 2, &[], false, false);
 
         let mut argument = 5;
         let mut result = -1;
