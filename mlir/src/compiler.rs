@@ -95,12 +95,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
             StringAttribute::new(context, &name),
             TypeAttribute::new(function_type.into()),
             {
-                let block = Block::new(
-                    &argument_types
-                        .iter()
-                        .map(|&r#type| (r#type, location))
-                        .collect::<Vec<_>>(),
-                );
+                let block = Block::new(&argument_types, &vec![location; argument_types.len()])?;
 
                 for result in function.sig.inputs.iter().map(|argument| match argument {
                     syn::FnArg::Typed(typed) => match typed.pat.as_ref() {
@@ -205,7 +200,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
         function_scope: bool,
         variables: &mut TrainMap<String, Value<'c, '_>>,
     ) -> Result<(Region<'c>, Option<Type<'c>>), Error> {
-        let builder = Block::new(&[]);
+        let builder = Block::new(&[], &[])?;
         let mut variables = variables.fork();
 
         let r#type =
@@ -471,7 +466,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                 let (then_region, then_type) =
                     self.compile_block_expression(&r#if.then_branch, false, variables)?;
                 let (else_region, else_type) = if let Some((_, expression)) = &r#if.else_branch {
-                    let block = Block::new(&[]);
+                    let block = Block::new(&[], &[])?;
                     let mut variables = variables.fork();
 
                     let value = self.compile_expression(&block, expression, &mut variables)?;
@@ -511,7 +506,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     &[],
                     &[],
                     {
-                        let block = Block::new(&[]);
+                        let block = Block::new(&[], &[])?;
 
                         block.append_operation(scf::condition(
                             block
@@ -582,7 +577,7 @@ impl<'c, 'm> Compiler<'c, 'm> {
                     &[],
                     &[],
                     {
-                        let block = Block::new(&[]);
+                        let block = Block::new(&[], &[])?;
                         let mut variables = variables.fork();
 
                         block.append_operation(scf::condition(

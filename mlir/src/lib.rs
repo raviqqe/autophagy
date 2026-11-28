@@ -56,7 +56,7 @@ mod tests {
         assert_eq!(pass_manager.run(&mut module), Ok(()));
         assert!(module.as_operation().verify());
 
-        let engine = ExecutionEngine::new(&module, 2, &[], false, false);
+        let engine = ExecutionEngine::new(&module, 2, &[], false, false).unwrap();
 
         let mut argument = 5;
         let mut result = -1;
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(pass_manager.run(&mut module), Ok(()));
         assert!(module.as_operation().verify());
 
-        let engine = ExecutionEngine::new(&module, 2, &[], false, false);
+        let engine = ExecutionEngine::new(&module, 2, &[], false, false).unwrap();
 
         let mut argument = 5;
         let mut result = -1;
